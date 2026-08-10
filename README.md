@@ -14,7 +14,12 @@ DB_USERNAME=root DB_PASSWORD=pw mvn spring-boot:run -Dspring-boot.run.profiles=m
 ```
 
 - 서버: `http://localhost:8080`
+- **Swagger UI (프론트 전달용): `http://localhost:8080/swagger-ui.html`**
+- OpenAPI 스펙(JSON): `http://localhost:8080/v3/api-docs`
 - H2 콘솔(dev): `http://localhost:8080/h2-console` (JDBC URL `jdbc:h2:mem:mcm`)
+
+> 프론트에는 서버를 띄운 뒤 **Swagger UI 주소**를 그대로 전달하면 됩니다.
+> 각 API의 요청/응답 스키마와 예시를 브라우저에서 바로 확인·테스트할 수 있습니다.
 
 ## API
 

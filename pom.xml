@@ -35,6 +35,13 @@
       <artifactId>spring-boot-starter-validation</artifactId>
     </dependency>
 
+    <!-- Swagger UI / OpenAPI 3 문서 -->
+    <dependency>
+      <groupId>org.springdoc</groupId>
+      <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+      <version>2.6.0</version>
+    </dependency>
+
     <!-- MySQL (운영/공용 개발) -->
     <dependency>
       <groupId>com.mysql</groupId>

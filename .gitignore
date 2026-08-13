@@ -4,6 +4,9 @@ target/
 !.mvn/wrapper/maven-wrapper.properties
 *.log
 .DS_Store
+
+# 개인 로컬 설정 (API 키 등). local.yml.example 을 복사해서 만든다.
+local.yml
 .idea/
 *.iml
 .vscode/

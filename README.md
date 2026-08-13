@@ -16,23 +16,49 @@ DB_USERNAME=root DB_PASSWORD=pw mvn spring-boot:run -Dspring-boot.run.profiles=m
 ### AI 분석용 API 키 (선택)
 
 키가 없어도 서버는 정상 기동하고 모든 API가 동작합니다. AI 판별만 규칙기반으로 폴백됩니다.
-실제 AI 분석을 켜려면 Gemini 무료 키를 발급받아 환경변수로 넣으세요.
 
-1. https://aistudio.google.com/apikey 에서 **Create API key** (Google 계정만 있으면 되고 카드 등록 불필요)
-2. 환경변수 설정 후 터미널/IDE 재시작
+**팀원 각자 자기 키를 쓰는 방법 (권장)**
+
+1. https://aistudio.google.com/apikey 에서 **Create API key**
+   (Google 계정만 있으면 되고 카드 등록 불필요. Cloud 프로젝트가 없으면 *프로젝트 만들기*를 먼저 누르세요.)
+2. `local.yml.example`을 같은 폴더에 **`local.yml`**로 복사
+3. `api-key`에 발급받은 키를 붙여넣고 서버 재시작
+
+`local.yml`은 `.gitignore`에 있어 커밋되지 않으므로, 서로의 키를 공유할 필요가 없고
+다른 프로젝트나 시스템 환경에도 영향을 주지 않습니다.
+
+환경변수 `GEMINI_API_KEY`로 넣어도 동작하지만, 계정 전역에 적용되므로 `local.yml`을 권장합니다.
+(둘 다 있으면 `local.yml`이 우선)
+
+기동 로그로 확인:
+
+| 로그 | 의미 |
+| --- | --- |
+| `LLM provider = gemini (model=...)` | 키 인식됨, 실제 AI 분석 동작 |
+| `LLM API 키가 비어 있어 mock으로 동작합니다` | 키 미인식, 규칙기반 폴백 |
+
+### 문제 해결
+
+**`fallback: true`가 계속 나올 때** — 서버 로그의 `WARN ... 실패` 줄에 원인이 찍힙니다.
+
+| 로그의 상태 코드 | 원인 | 대응 |
+| --- | --- | --- |
+| `404 ... no longer available` | 지정한 모델이 퇴역 | 아래 명령으로 현재 모델 확인 후 `llm.model` 교체 |
+| `503 ... high demand` | 구글 서버 혼잡 (내 키 문제 아님) | 자동으로 3회까지 재시도함. 계속되면 다른 모델로 교체 |
+| `429` | 호출 속도 제한 | 잠시 후 재시도 |
+| `400 API key not valid` | 키가 잘못됨 | `local.yml`의 키 확인 |
+
+현재 사용 가능한 모델 목록 확인:
 
 ```bash
-# Windows
-setx GEMINI_API_KEY "발급받은_키"
-
-# macOS / Linux
-export GEMINI_API_KEY="발급받은_키"
+curl "https://generativelanguage.googleapis.com/v1beta/models?key=발급받은_키"
 ```
 
-기동 로그에 `LLM provider = gemini` 가 찍히면 적용된 것입니다.
-`LLM API 키가 비어 있어 mock으로 동작합니다` 가 찍히면 아직 인식되지 않은 상태입니다.
+`supportedGenerationMethods`에 `generateContent`가 있는 모델이면 쓸 수 있습니다.
+기본값은 `gemini-2.5-flash`이며, 퇴역 걱정 없는 대안으로 `gemini-flash-latest`가 있습니다
+(대신 트래픽이 몰려 503이 잦습니다).
 
-제공자를 바꾸려면 `application.yml`의 `llm.provider`만 수정하면 됩니다 (`gemini` / `mock`).
+제공자를 바꾸려면 `llm.provider`를 수정하면 됩니다 (`gemini` / `mock`).
 
 - 서버: `http://localhost:8080`
 - **Swagger UI (프론트 전달용): `http://localhost:8080/swagger-ui.html`**

@@ -9,7 +9,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 /**
@@ -22,6 +24,9 @@ public class GeminiLlmClient implements LlmClient {
 
     private static final Logger log = LoggerFactory.getLogger(GeminiLlmClient.class);
     private static final String BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
+
+    /** 모델 과부하(503)나 속도 제한(429)은 흔하고 대개 일시적이라 몇 번 다시 시도한다. */
+    private static final int MAX_ATTEMPTS = 3;
 
     private final LlmProperties props;
     private final RestClient restClient;
@@ -45,21 +50,67 @@ public class GeminiLlmClient implements LlmClient {
     @Override
     public String complete(String prompt) {
         ObjectNode body = buildRequestBody(prompt);
+        LlmException last = null;
 
-        String raw;
-        try {
-            raw = restClient.post()
-                    .uri("/models/{model}:generateContent?key={key}", props.getModel(), props.getApiKey())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(body)
-                    .retrieve()
-                    .body(String.class);
-        } catch (Exception e) {
-            // 네트워크 오류, 4xx/5xx, 타임아웃 모두 여기로 모인다.
-            throw new LlmException("Gemini 호출 실패: " + e.getMessage(), e);
+        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            try {
+                // byte[]로 받는다. 오류 응답은 Content-Type이 application/octet-stream으로 오는 경우가 있어
+                // String으로 바로 받으면 변환에 실패하고 상태 코드를 판별할 수 없게 된다.
+                byte[] bytes = restClient.post()
+                        .uri("/models/{model}:generateContent?key={key}", props.getModel(), props.getApiKey())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(body)
+                        .retrieve()
+                        .body(byte[].class);
+                String raw = bytes == null ? "" : new String(bytes, StandardCharsets.UTF_8);
+                return extractText(raw);
+
+            } catch (RestClientResponseException e) {
+                int status = e.getStatusCode().value();
+                if (!isRetryable(status) || attempt == MAX_ATTEMPTS) {
+                    throw new LlmException("Gemini 호출 실패: " + status + " " + e.getStatusText()
+                            + " " + e.getResponseBodyAsString(), e);
+                }
+                // 503(과부하) / 429(속도 제한) / 5xx는 잠깐 뒤 다시 하면 대개 성공한다.
+                log.warn("Gemini {} 응답 → {}ms 후 재시도 ({}/{})",
+                        status, backoffMillis(attempt), attempt, MAX_ATTEMPTS);
+                last = new LlmException("Gemini 호출 실패: " + status + " " + e.getStatusText(), e);
+                sleep(backoffMillis(attempt));
+
+            } catch (LlmException e) {
+                // 응답은 왔는데 형식이 이상한 경우. 재시도해도 같을 가능성이 높아 바로 올린다.
+                throw e;
+
+            } catch (Exception e) {
+                // 네트워크 오류, 타임아웃 등.
+                if (attempt == MAX_ATTEMPTS) {
+                    throw new LlmException("Gemini 호출 실패: " + e.getMessage(), e);
+                }
+                log.warn("Gemini 통신 오류({}) → {}ms 후 재시도 ({}/{})",
+                        e.getMessage(), backoffMillis(attempt), attempt, MAX_ATTEMPTS);
+                last = new LlmException("Gemini 호출 실패: " + e.getMessage(), e);
+                sleep(backoffMillis(attempt));
+            }
         }
+        throw last != null ? last : new LlmException("Gemini 호출 실패");
+    }
 
-        return extractText(raw);
+    /** 일시적인 장애만 재시도한다. 400/401/403/404는 다시 해도 결과가 같다. */
+    private boolean isRetryable(int status) {
+        return status == 429 || status >= 500;
+    }
+
+    private long backoffMillis(int attempt) {
+        return 500L * attempt;   // 500ms, 1000ms
+    }
+
+    private void sleep(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            throw new LlmException("재시도 대기 중 중단되었습니다.", ie);
+        }
     }
 
     private ObjectNode buildRequestBody(String prompt) {

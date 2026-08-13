@@ -22,7 +22,18 @@ public class LlmProperties {
     /** 비어 있으면 provider 설정과 무관하게 mock으로 동작한다. */
     private String apiKey = "";
 
-    private String model = "gemini-2.0-flash";
+    /**
+     * 응답 속도와 가용성이 안정적인 현행 모델을 기본값으로 둔다.
+     *
+     * <p>별칭인 gemini-flash-latest는 퇴역 걱정이 없는 대신 트래픽이 몰려 503이 잦다.
+     * 반대로 버전을 고정하면 빠르지만 언젠가 퇴역해 404가 난다.
+     * 404가 나기 시작하면 아래 명령으로 현재 쓸 수 있는 모델을 확인해 llm.model을 바꾸면 된다.
+     *
+     * <pre>
+     * curl "https://generativelanguage.googleapis.com/v1beta/models?key=발급받은_키"
+     * </pre>
+     */
+    private String model = "gemini-2.5-flash";
 
     /** 응답이 늦어도 프론트가 하염없이 기다리지 않도록 하는 상한. */
     private int timeoutSeconds = 20;

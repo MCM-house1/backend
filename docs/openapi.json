@@ -1,372 +1,589 @@
 {
-    "openapi": "3.0.1",
-    "info": {
-        "title": "MCM HOUSE API",
-        "description": "아이덴티티 테스트 & 팝업 Zone 탐험(Stamp/Passport) API.\n\n기본 플로우:\n1) GET /api/questions 로 문항을 받아 화면에 표시\n2) POST /api/results 로 선택지 index 배열 제출 → resultId, 최종 House, 추천 순서 수신\n3) POST /api/results/{id}/visits 로 Zone QR 스캔값 전달 → Stamp 지급 + 다음 추천 Zone\n4) GET /api/results/{id}/passport 로 탐험 현황(0/4~4/4) 조회\n",
-        "version": "v0.1"
-    },
-    "servers": [
-        {
-            "url": "http://localhost:8080",
-            "description": "Generated server url"
-        }
-    ],
-    "tags": [
-        {
-            "name": "MCM HOUSE",
-            "description": "아이덴티티 테스트 · Zone 탐험 · Stamp/Passport"
-        }
-    ],
-    "paths": {
-        "/api/results": {
-            "post": {
-                "tags": [
-                    "MCM HOUSE"
-                ],
-                "summary": "진단 제출",
-                "description": "answers = 1~6번 질문에서 고른 선택지 index 배열(예: [0,0,3,1,2,0]). 점수 합산 → 최종 House(동점 시 복합형) → 개인화 추천 순서를 반환.",
-                "operationId": "submit",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/SubmitRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ResultView"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/results/{id}/visits": {
-            "post": {
-                "tags": [
-                    "MCM HOUSE"
-                ],
-                "summary": "Zone 방문 인증(QR)",
-                "description": "scanValue = Zone QR/NFC 스캔값(예: \"LEGACY\", \"ZONE:FREEDOM\", 관련 URL). 해당 House Stamp를 지급하고, 미방문 중 추천 순위가 가장 높은 다음 Zone을 안내. 중복 스캔은 멱등 처리.",
-                "operationId": "visit",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "description": "진단 결과 ID",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/VisitRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/PassportView"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/results/{id}": {
-            "get": {
-                "tags": [
-                    "MCM HOUSE"
-                ],
-                "summary": "진단 결과 조회",
-                "description": "resultId로 저장된 진단 결과를 다시 조회.",
-                "operationId": "result",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "description": "진단 결과 ID",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ResultView"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/results/{id}/passport": {
-            "get": {
-                "tags": [
-                    "MCM HOUSE"
-                ],
-                "summary": "탐험 현황(Passport)",
-                "description": "4개 Zone의 방문/미방문 상태와 진행도(0/4~4/4), 완료 여부, 다음 추천 Zone을 반환.",
-                "operationId": "passport",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "description": "진단 결과 ID",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/PassportView"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/questions": {
-            "get": {
-                "tags": [
-                    "MCM HOUSE"
-                ],
-                "summary": "문항 조회",
-                "description": "아이덴티티 테스트 6문항과 선택지를 순서대로 반환. 선택지의 index(0~3)를 제출에 사용.",
-                "operationId": "questions",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/QuestionView"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    },
-    "components": {
-        "schemas": {
-            "SubmitRequest": {
-                "required": [
-                    "answers"
-                ],
-                "type": "object",
-                "properties": {
-                    "answers": {
-                        "maxItems": 6,
-                        "minItems": 6,
-                        "type": "array",
-                        "items": {
-                            "type": "integer",
-                            "format": "int32"
-                        }
-                    }
-                }
-            },
-            "HouseView": {
-                "type": "object",
-                "properties": {
-                    "key": {
-                        "type": "string"
-                    },
-                    "title": {
-                        "type": "string"
-                    },
-                    "description": {
-                        "type": "string"
-                    },
-                    "tags": {
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        }
-                    },
-                    "zoneName": {
-                        "type": "string"
-                    },
-                    "color": {
-                        "type": "string"
-                    },
-                    "recommendedProductIds": {
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        }
-                    }
-                }
-            },
-            "ResultView": {
-                "type": "object",
-                "properties": {
-                    "resultId": {
-                        "type": "integer",
-                        "format": "int64"
-                    },
-                    "scores": {
-                        "type": "object",
-                        "additionalProperties": {
-                            "type": "integer",
-                            "format": "int32"
-                        }
-                    },
-                    "finalHouses": {
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        }
-                    },
-                    "combo": {
-                        "type": "boolean"
-                    },
-                    "primaryHouse": {
-                        "$ref": "#/components/schemas/HouseView"
-                    },
-                    "recommendedRoute": {
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        }
-                    }
-                }
-            },
-            "VisitRequest": {
-                "required": [
-                    "scanValue"
-                ],
-                "type": "object",
-                "properties": {
-                    "scanValue": {
-                        "type": "string"
-                    }
-                }
-            },
-            "PassportView": {
-                "type": "object",
-                "properties": {
-                    "resultId": {
-                        "type": "integer",
-                        "format": "int64"
-                    },
-                    "visitedCount": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "totalZones": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "completed": {
-                        "type": "boolean"
-                    },
-                    "nextRecommended": {
-                        "type": "string"
-                    },
-                    "zones": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/ZoneStatusView"
-                        }
-                    }
-                }
-            },
-            "ZoneStatusView": {
-                "type": "object",
-                "properties": {
-                    "house": {
-                        "type": "string"
-                    },
-                    "zoneName": {
-                        "type": "string"
-                    },
-                    "zoneMission": {
-                        "type": "string"
-                    },
-                    "color": {
-                        "type": "string"
-                    },
-                    "order": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "visited": {
-                        "type": "boolean"
-                    }
-                }
-            },
-            "OptionView": {
-                "type": "object",
-                "properties": {
-                    "index": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "text": {
-                        "type": "string"
-                    }
-                }
-            },
-            "QuestionView": {
-                "type": "object",
-                "properties": {
-                    "no": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "text": {
-                        "type": "string"
-                    },
-                    "options": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/OptionView"
-                        }
-                    }
-                }
-            }
-        }
+  "openapi": "3.0.1",
+  "info": {
+    "title": "MCM HOUSE API",
+    "description": "아이덴티티 테스트 & 팝업 Zone 탐험(Stamp/Passport) API.\n\n기본 플로우:\n1) GET /api/questions 로 문항을 받아 화면에 표시\n2) POST /api/results 로 선택지 index 배열 제출 → resultId, 최종 House, 추천 순서 수신\n3) POST /api/results/{id}/visits 로 Zone QR 스캔값 전달 → Stamp 지급 + 다음 추천 Zone\n4) GET /api/results/{id}/passport 로 탐험 현황(0/4~4/4) 조회\n",
+    "version": "v0.1"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Generated server url"
     }
+  ],
+  "tags": [
+    {
+      "name": "MCM HOUSE",
+      "description": "아이덴티티 테스트 · Zone 탐험 · Stamp/Passport"
+    }
+  ],
+  "paths": {
+    "/api/results": {
+      "post": {
+        "tags": [
+          "MCM HOUSE"
+        ],
+        "summary": "진단 제출",
+        "description": "answers = 1~6번 질문에서 고른 선택지 index 배열(예: [0,0,3,1,2,0]). 점수 합산 → 최종 House(동점 시 복합형) → 개인화 추천 순서를 반환.",
+        "operationId": "submit",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results/{id}/visits": {
+      "post": {
+        "tags": [
+          "MCM HOUSE"
+        ],
+        "summary": "Zone 방문 인증(QR)",
+        "description": "scanValue = Zone QR/NFC 스캔값(예: \"LEGACY\", \"ZONE:FREEDOM\", 관련 URL). 해당 House Stamp를 지급하고 현재 위치(currentZone)를 함께 갱신하며, 미방문 중 추천 순위가 가장 높은 다음 Zone을 안내. 중복 스캔은 멱등 처리.",
+        "operationId": "visit",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "진단 결과 ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VisitRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PassportView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results/{id}/ai/questions": {
+      "post": {
+        "tags": [
+          "MCM HOUSE"
+        ],
+        "summary": "[AI] 후속질문 생성",
+        "description": "6문항 응답을 근거로 이 사용자에게만 해당하는 자연어 후속질문 2개를 생성. 재호출하면 질문이 새로 생성되고 기존 답변은 초기화된다. LLM 호출이 실패하면 기본 질문을 돌려주며 fallback=true로 표시된다.",
+        "operationId": "aiQuestions",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "진단 결과 ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiQuestionsView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results/{id}/ai/analyze": {
+      "post": {
+        "tags": [
+          "MCM HOUSE"
+        ],
+        "summary": "[AI] 최종 아이덴티티 판별",
+        "description": "후속질문에 대한 답변을 제출하면 객관식 결과와 함께 종합해 최종 House를 판별. answers는 생성된 질문과 같은 개수여야 한다. LLM 호출이 실패하면 객관식 점수 결과로 폴백하며 ai.fallback=true로 표시된다.",
+        "operationId": "aiAnalyze",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "진단 결과 ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiAnalyzeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results/{id}": {
+      "get": {
+        "tags": [
+          "MCM HOUSE"
+        ],
+        "summary": "진단 결과 조회",
+        "description": "resultId로 저장된 진단 결과를 다시 조회. AI 분석을 마쳤다면 ai 필드에 결과가 함께 담긴다.",
+        "operationId": "result",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "진단 결과 ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results/{id}/passport": {
+      "get": {
+        "tags": [
+          "MCM HOUSE"
+        ],
+        "summary": "탐험 현황(Passport)",
+        "description": "4개 Zone의 방문/미방문 상태와 진행도(0/4~4/4), 완료 여부, 다음 추천 Zone, 현재 위치를 반환.",
+        "operationId": "passport",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "진단 결과 ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PassportView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results/{id}/current-zone": {
+      "get": {
+        "tags": [
+          "MCM HOUSE"
+        ],
+        "summary": "현재 위치 확인",
+        "description": "마지막으로 스캔한 Zone을 반환. GPS가 아니라 방문 인증 시 갱신된 값이다. 아직 아무 Zone도 스캔하지 않았으면 currentZone은 null.",
+        "operationId": "currentZone",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "진단 결과 ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentZoneView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/questions": {
+      "get": {
+        "tags": [
+          "MCM HOUSE"
+        ],
+        "summary": "문항 조회",
+        "description": "아이덴티티 테스트 6문항과 선택지를 순서대로 반환. 선택지의 index(0~3)를 제출에 사용.",
+        "operationId": "questions",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QuestionView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "SubmitRequest": {
+        "required": [
+          "answers"
+        ],
+        "type": "object",
+        "properties": {
+          "answers": {
+            "maxItems": 6,
+            "minItems": 6,
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        }
+      },
+      "AiAnalysisView": {
+        "type": "object",
+        "properties": {
+          "analyzed": {
+            "type": "boolean"
+          },
+          "fallback": {
+            "type": "boolean"
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "answers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "house": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "HouseView": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "zoneName": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "recommendedProductIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ResultView": {
+        "type": "object",
+        "properties": {
+          "resultId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "scores": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "finalHouses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "combo": {
+            "type": "boolean"
+          },
+          "comboTitle": {
+            "type": "string"
+          },
+          "comboDescription": {
+            "type": "string"
+          },
+          "primaryHouse": {
+            "$ref": "#/components/schemas/HouseView"
+          },
+          "recommendedRoute": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ai": {
+            "$ref": "#/components/schemas/AiAnalysisView"
+          }
+        }
+      },
+      "VisitRequest": {
+        "required": [
+          "scanValue"
+        ],
+        "type": "object",
+        "properties": {
+          "scanValue": {
+            "type": "string"
+          }
+        }
+      },
+      "PassportView": {
+        "type": "object",
+        "properties": {
+          "resultId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "visitedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalZones": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completed": {
+            "type": "boolean"
+          },
+          "nextRecommended": {
+            "type": "string"
+          },
+          "currentZone": {
+            "type": "string"
+          },
+          "zones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ZoneStatusView"
+            }
+          }
+        }
+      },
+      "ZoneStatusView": {
+        "type": "object",
+        "properties": {
+          "house": {
+            "type": "string"
+          },
+          "zoneName": {
+            "type": "string"
+          },
+          "zoneMission": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "order": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "visited": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AiQuestionsView": {
+        "type": "object",
+        "properties": {
+          "resultId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fallback": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AiAnalyzeRequest": {
+        "required": [
+          "answers"
+        ],
+        "type": "object",
+        "properties": {
+          "answers": {
+            "maxItems": 5,
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CurrentZoneView": {
+        "type": "object",
+        "properties": {
+          "resultId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "currentZone": {
+            "type": "string"
+          },
+          "zoneName": {
+            "type": "string"
+          },
+          "zoneMission": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "visited": {
+            "type": "boolean"
+          },
+          "nextRecommended": {
+            "type": "string"
+          }
+        }
+      },
+      "OptionView": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "QuestionView": {
+        "type": "object",
+        "properties": {
+          "no": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "text": {
+            "type": "string"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OptionView"
+            }
+          }
+        }
+      }
+    }
+  }
 }

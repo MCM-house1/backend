@@ -5,6 +5,19 @@ spring:
 server:
   port: 8080
 
+# ===== AI 아이덴티티 분석 =====
+# provider를 바꾸면 LLM 제공자가 교체된다. (지원: gemini, mock)
+# api-key가 비어 있으면 provider와 무관하게 mock으로 동작하므로,
+# 키 없이도 서버는 정상 기동하고 전체 플로우를 테스트할 수 있다.
+#
+# Gemini 무료 키 발급: https://aistudio.google.com/apikey
+# 발급 후 환경변수 설정:  setx GEMINI_API_KEY "발급받은_키"   (설정 후 터미널 재시작)
+llm:
+  provider: ${LLM_PROVIDER:gemini}
+  api-key: ${GEMINI_API_KEY:}
+  model: ${LLM_MODEL:gemini-2.0-flash}
+  timeout-seconds: 20
+
 ---
 # ===== dev: H2 인메모리 (DB 설치 없이 바로 실행) =====
 spring:

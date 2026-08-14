@@ -16,7 +16,6 @@ import java.util.List;
 /** MCM HOUSE 아이덴티티 테스트 & 팝업 Zone 탐험 API. */
 @Tag(name = "MCM HOUSE", description = "아이덴티티 테스트 · Zone 탐험 · Stamp/Passport")
 @RestController
-@RequestMapping("/api")
 @CrossOrigin(origins = "*")   // 해커톤 프론트 연동 편의를 위해 개방
 public class DiagnosisController {
 

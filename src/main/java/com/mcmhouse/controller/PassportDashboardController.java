@@ -25,7 +25,6 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
  */
 @Tag(name = "Passport Dashboard", description = "패스포트 대시보드 통합 조회")
 @RestController
-@RequestMapping("/api")
 @CrossOrigin(origins = "*")
 public class PassportDashboardController {
 

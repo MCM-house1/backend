@@ -22,7 +22,6 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
  */
 @Tag(name = "Products", description = "상품 조회 및 House별 추천")
 @RestController
-@RequestMapping("/api")
 @CrossOrigin(origins = "*")
 public class ProductController {
 

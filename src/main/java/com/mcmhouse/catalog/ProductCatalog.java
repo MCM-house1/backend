@@ -1,5 +1,7 @@
-package com.mcmhouse.domain;
+package com.mcmhouse.catalog;
 
+import com.mcmhouse.domain.House;
+import com.mcmhouse.domain.Product;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import org.springframework.core.io.ClassPathResource;

@@ -181,33 +181,3 @@ src/main/java/com/mcmhouse/llm/
 └── LlmConfig.java        설정에 따라 구현체 선택
 ```
 
----
-
-## 문제 해결
-
-**`fallback: true`가 계속 나올 때** — 서버 로그의 `WARN ... 실패` 줄에 원인이 찍힙니다.
-
-| 상태 코드 | 원인 | 대응 |
-| --- | --- | --- |
-| `404 ... no longer available` | 지정한 모델이 퇴역 | 아래 명령으로 현재 모델 확인 후 `llm.model` 교체 |
-| `503 ... high demand` | 구글 서버 혼잡 (내 키 문제 아님) | 자동으로 3회 재시도함. 계속되면 다른 모델로 교체 |
-| `429` | 호출 속도 제한 | 잠시 후 재시도 |
-| `400 API key not valid` | 키가 잘못됨 | `local.yml`의 키 확인 |
-
-현재 사용 가능한 모델 목록:
-
-```bash
-curl "https://generativelanguage.googleapis.com/v1beta/models?key=발급받은_키"
-```
-
-`supportedGenerationMethods`에 `generateContent`가 있는 모델이면 쓸 수 있습니다.
-기본값은 `gemini-2.5-flash`이며, 퇴역 걱정이 없는 대안으로 `gemini-flash-latest`가 있습니다
-(대신 트래픽이 몰려 503이 잦습니다).
-
-**포트 8080이 이미 사용 중일 때** — 이전에 띄운 서버가 남아 있는 경우입니다.
-
-```bash
-# Windows
-netstat -ano | findstr :8080     # 마지막 열이 PID
-taskkill /PID <PID> /F
-```

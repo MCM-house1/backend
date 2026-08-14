@@ -1,5 +1,6 @@
-package com.mcmhouse.domain;
+package com.mcmhouse.catalog;
 
+import com.mcmhouse.domain.House;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

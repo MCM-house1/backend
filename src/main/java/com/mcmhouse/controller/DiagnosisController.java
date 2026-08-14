@@ -1,6 +1,9 @@
 package com.mcmhouse.controller;
 
-import com.mcmhouse.dto.Dtos.*;
+import com.mcmhouse.dto.AiDtos.*;
+import com.mcmhouse.dto.QuestionDtos.*;
+import com.mcmhouse.dto.ResultDtos.*;
+import com.mcmhouse.dto.ZoneDtos.*;
 import com.mcmhouse.service.DiagnosisService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

@@ -2,7 +2,7 @@ package com.mcmhouse.controller;
 
 import com.mcmhouse.domain.House;
 import com.mcmhouse.domain.Product;
-import com.mcmhouse.domain.ProductCatalog;
+import com.mcmhouse.catalog.ProductCatalog;
 import com.mcmhouse.repository.DiagnosisResultRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

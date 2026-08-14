@@ -1,8 +1,11 @@
 package com.mcmhouse.service;
 
+import com.mcmhouse.catalog.QuestionCatalog;
 import com.mcmhouse.domain.*;
-import com.mcmhouse.dto.Dtos;
-import com.mcmhouse.dto.Dtos.*;
+import com.mcmhouse.dto.AiDtos.*;
+import com.mcmhouse.dto.QuestionDtos.*;
+import com.mcmhouse.dto.ResultDtos.*;
+import com.mcmhouse.dto.ZoneDtos.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -29,7 +32,7 @@ public class DiagnosisService {
     }
 
     public List<QuestionView> getQuestions() {
-        return catalog.getQuestions().stream().map(Dtos::toQuestionView).toList();
+        return catalog.getQuestions().stream().map(QuestionView::from).toList();
     }
 
     /** 답변 제출 → 점수 계산 → 최종 House 판별 → 저장. */

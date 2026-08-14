@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mcmhouse.domain.DiagnosisResult;
 import com.mcmhouse.domain.House;
-import com.mcmhouse.domain.QuestionCatalog;
+import com.mcmhouse.catalog.QuestionCatalog;
 import com.mcmhouse.llm.LlmClient;
 import com.mcmhouse.llm.LlmException;
 import com.mcmhouse.llm.MockLlmClient;

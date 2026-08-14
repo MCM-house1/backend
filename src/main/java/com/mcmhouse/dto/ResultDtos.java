@@ -2,37 +2,23 @@ package com.mcmhouse.dto;
 
 import com.mcmhouse.domain.DiagnosisResult;
 import com.mcmhouse.domain.House;
-import com.mcmhouse.domain.QuestionCatalog;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.util.List;
 import java.util.Map;
 
-/** 요청/응답 DTO 모음. */
-public final class Dtos {
+/** 진단 제출·결과 조회 관련 DTO (AI 분석 결과 포함). */
+public final class ResultDtos {
 
-    private Dtos() {}
+    private ResultDtos() {}
 
-    /* ---------- 질문 조회 ---------- */
-    public record OptionView(int index, String text) {}
-    public record QuestionView(int no, String text, List<OptionView> options) {}
-
-    public static QuestionView toQuestionView(QuestionCatalog.Question q) {
-        List<OptionView> opts = q.options().stream()
-                .map(o -> new OptionView(o.index(), o.text()))
-                .toList();
-        return new QuestionView(q.no(), q.text(), opts);
-    }
-
-    /* ---------- 진단 제출 ----------
-       answers[i] = i+1번 질문에서 고른 선택지 index(0~3) */
+    /** answers[i] = i+1번 질문에서 고른 선택지 index(0~3). */
     public record SubmitRequest(
             @NotNull @Size(min = 6, max = 6, message = "6개 질문 모두 답변해야 합니다.")
             List<@NotNull Integer> answers
     ) {}
 
-    /* ---------- 진단 결과 ---------- */
     public record HouseView(
             String key, String title, String description,
             List<String> tags, String zoneName, String color,
@@ -98,53 +84,4 @@ public final class Dtos {
             );
         }
     }
-
-    /* ---------- Zone 방문 인증 ---------- */
-    public record VisitRequest(
-            @NotNull(message = "QR/NFC 스캔값(scanValue) 또는 house 중 하나는 필요합니다.")
-            String scanValue    // 예: "LEGACY", "ZONE:LEGACY", "https://.../legacy"
-    ) {}
-
-    public record ZoneStatusView(
-            String house, String zoneName, String zoneMission,
-            String color, int order, boolean visited
-    ) {}
-
-    public record PassportView(
-            Long resultId,
-            int visitedCount,
-            int totalZones,
-            boolean completed,
-            String nextRecommended,         // 다음 추천 미방문 Zone (없으면 null)
-            String currentZone,             // 마지막으로 스캔한 Zone (없으면 null)
-            List<ZoneStatusView> zones      // 추천 순서대로 정렬된 전체 Zone 현황
-    ) {}
-
-    /* ---------- 현재 위치 ----------
-       GPS가 아니라 마지막으로 스캔한 Zone을 돌려주는 것뿐이다. */
-    public record CurrentZoneView(
-            Long resultId,
-            String currentZone,     // 아직 아무 Zone도 스캔하지 않았으면 null
-            String zoneName,
-            String zoneMission,
-            String color,
-            boolean visited,        // 해당 Zone의 체험(방문 인증)이 끝났는지
-            String nextRecommended  // 미방문 중 추천 순위가 가장 높은 Zone
-    ) {}
-
-    /* ---------- AI 아이덴티티 분석 ---------- */
-
-    /** 후속질문 생성 응답. */
-    public record AiQuestionsView(
-            Long resultId,
-            List<String> questions,
-            boolean fallback        // true면 LLM 실패로 기본 질문을 사용
-    ) {}
-
-    /** 후속질문에 대한 답변 제출. 질문 개수와 같은 수의 답변이 필요하다. */
-    public record AiAnalyzeRequest(
-            @NotNull(message = "answers는 필수입니다.")
-            @Size(min = 1, max = 5, message = "답변은 1~5개여야 합니다.")
-            List<@NotNull String> answers
-    ) {}
 }

@@ -3,7 +3,10 @@ package com.mcmhouse.controller;
 import com.mcmhouse.domain.House;
 import com.mcmhouse.domain.Product;
 import com.mcmhouse.catalog.ProductCatalog;
+import com.mcmhouse.domain.DiagnosisResult;
+import com.mcmhouse.dto.RecommendationDtos.ProductDetailView;
 import com.mcmhouse.repository.DiagnosisResultRepository;
+import com.mcmhouse.service.RecommendationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
@@ -18,7 +21,8 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
  *
  *  GET /api/products               전체 상품
  *  GET /api/products/{house}       특정 House 상품
- *  GET /api/results/{id}/recommendations   진단 결과 기반 추천 상품
+ *  GET /api/results/{id}/recommendations       진단 결과 기반 추천 상품
+ *  GET /api/results/{id}/products/{productId}  상품 상세(추천 이유 + COMPLETE THE LOOK)
  */
 @Tag(name = "Products", description = "상품 조회 및 House별 추천")
 @RestController
@@ -27,10 +31,13 @@ public class ProductController {
 
     private final ProductCatalog catalog;
     private final DiagnosisResultRepository resultRepository;
+    private final RecommendationService recommendationService;
 
-    public ProductController(ProductCatalog catalog, DiagnosisResultRepository resultRepository) {
+    public ProductController(ProductCatalog catalog, DiagnosisResultRepository resultRepository,
+                             RecommendationService recommendationService) {
         this.catalog = catalog;
         this.resultRepository = resultRepository;
+        this.recommendationService = recommendationService;
     }
 
     @Operation(summary = "전체 상품 조회")
@@ -56,6 +63,21 @@ public class ProductController {
                         "진단 결과를 찾을 수 없습니다: " + id));
         House house = result.effectiveHouse();
         return new RecommendationView(result.getId(), house.name(), catalog.forHouse(house));
+    }
+
+    @Operation(summary = "상품 상세 (추천 이유 + COMPLETE THE LOOK)",
+            description = "진단 결과의 House를 근거로 이 상품의 추천 이유와 함께 매치할 상품을 AI가 생성. "
+                    + "LLM 실패 시 기본 문구 + 같은 House 상품으로 폴백하며 fallback=true로 표시.")
+    @GetMapping("/results/{id}/products/{productId}")
+    public ProductDetailView productDetail(@PathVariable Long id, @PathVariable String productId) {
+        DiagnosisResult result = resultRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND,
+                        "진단 결과를 찾을 수 없습니다: " + id));
+        Product product = catalog.findById(productId);
+        if (product == null) {
+            throw new ResponseStatusException(NOT_FOUND, "상품을 찾을 수 없습니다: " + productId);
+        }
+        return recommendationService.productDetail(result.effectiveHouse(), product);
     }
 
     private House parseHouse(String raw) {

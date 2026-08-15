@@ -47,4 +47,9 @@ public class ProductCatalog {
     public List<Product> forHouse(House house) {
         return byHouse.getOrDefault(house, List.of());
     }
+
+    /** 상품 ID로 조회. 없으면 null. */
+    public Product findById(String id) {
+        return all.stream().filter(p -> p.id().equals(id)).findFirst().orElse(null);
+    }
 }

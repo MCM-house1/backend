@@ -1,0 +1,103 @@
+package com.mcmhouse.domain;
+
+import jakarta.persistence.*;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * 미션에서 촬영한 거울 셀카에 대한 스타일 분석 결과 = 패스포트 아카이브 1건.
+ * 셀카 이미지는 base64로 저장하고, 세션(resultId) × House당 최신 1건만 유지한다.
+ */
+@Entity
+@Table(
+        name = "style_discovery",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"result_id", "house"})
+)
+public class StyleDiscovery {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "result_id", nullable = false)
+    private Long resultId;
+
+    /** 이 셀카가 속한 House 미션. */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private House house;
+
+    /** 촬영한 셀카. data URL 형태(data:image/jpeg;base64,...)로 저장해 그대로 <img>에 쓸 수 있게 한다. */
+    @Lob
+    @Column(name = "photo_data_url", nullable = false)
+    private String photoDataUrl;
+
+    /** 사용자가 미션에서 고른 상품 id(있으면). */
+    @Column(name = "selected_product_id")
+    private String selectedProductId;
+
+    /** 분석된 스타일 제목. 예: "깔끔하지만 평범하지 않게" */
+    @Column(name = "style_title", length = 200)
+    private String styleTitle;
+
+    /** 스타일 설명. */
+    @Column(name = "style_description", length = 1000)
+    private String styleDescription;
+
+    /** 스타일 키워드. 예: 정돈된 / 도시적인 / 존재감 있는 */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "style_discovery_keyword", joinColumns = @JoinColumn(name = "discovery_id"))
+    @Column(name = "keyword")
+    @OrderColumn(name = "seq")
+    private List<String> keywords = new ArrayList<>();
+
+    /** 이 스타일이 주는 인상. */
+    @Column(name = "impression", length = 1000)
+    private String impression;
+
+    /** 비전 분석 실패로 폴백(제품+House 기반)했는지. */
+    @Column(name = "fallback", nullable = false)
+    private boolean fallback;
+
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    protected StyleDiscovery() {}
+
+    public StyleDiscovery(Long resultId, House house, String photoDataUrl, String selectedProductId) {
+        this.resultId = resultId;
+        this.house = house;
+        this.photoDataUrl = photoDataUrl;
+        this.selectedProductId = selectedProductId;
+    }
+
+    /** 분석 결과를 채운다. 재분석 시 덮어쓴다. */
+    public void applyAnalysis(String styleTitle, String styleDescription,
+                              List<String> keywords, String impression, boolean fallback) {
+        this.styleTitle = styleTitle;
+        this.styleDescription = styleDescription;
+        this.keywords = new ArrayList<>(keywords);
+        this.impression = impression;
+        this.fallback = fallback;
+    }
+
+    public void updatePhoto(String photoDataUrl, String selectedProductId) {
+        this.photoDataUrl = photoDataUrl;
+        this.selectedProductId = selectedProductId;
+        this.createdAt = LocalDateTime.now();
+    }
+
+    public Long getId() { return id; }
+    public Long getResultId() { return resultId; }
+    public House getHouse() { return house; }
+    public String getPhotoDataUrl() { return photoDataUrl; }
+    public String getSelectedProductId() { return selectedProductId; }
+    public String getStyleTitle() { return styleTitle; }
+    public String getStyleDescription() { return styleDescription; }
+    public List<String> getKeywords() { return keywords; }
+    public String getImpression() { return impression; }
+    public boolean isFallback() { return fallback; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+}

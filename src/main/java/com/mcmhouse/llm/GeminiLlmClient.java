@@ -49,7 +49,16 @@ public class GeminiLlmClient implements LlmClient {
 
     @Override
     public String complete(String prompt) {
-        ObjectNode body = buildRequestBody(prompt);
+        return generate(buildRequestBody(prompt));
+    }
+
+    @Override
+    public String completeWithImage(String prompt, String base64Image, String mimeType) {
+        return generate(buildRequestBodyWithImage(prompt, base64Image, mimeType));
+    }
+
+    /** 요청 바디를 받아 Gemini를 호출하고 생성 텍스트를 돌려준다. (재시도 포함) */
+    private String generate(ObjectNode body) {
         LlmException last = null;
 
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -121,13 +130,35 @@ public class GeminiLlmClient implements LlmClient {
         ObjectNode content = mapper.createObjectNode().set("parts", parts);
         body.set("contents", mapper.createArrayNode().add(content));
 
-        // JSON만 돌려주도록 강제. 모델이 설명문을 덧붙이는 것을 막아 파싱 실패를 줄인다.
+        addJsonGenerationConfig(body);
+        return body;
+    }
+
+    /** 텍스트 + 이미지(inline_data) 파트를 담은 비전 요청 바디. */
+    private ObjectNode buildRequestBodyWithImage(String prompt, String base64Image, String mimeType) {
+        ObjectNode body = mapper.createObjectNode();
+
+        ObjectNode textPart = mapper.createObjectNode().put("text", prompt);
+        ObjectNode inlineData = mapper.createObjectNode()
+                .put("mime_type", mimeType)
+                .put("data", base64Image);
+        ObjectNode imagePart = mapper.createObjectNode();
+        imagePart.set("inline_data", inlineData);
+
+        ArrayNode parts = mapper.createArrayNode().add(textPart).add(imagePart);
+        ObjectNode content = mapper.createObjectNode().set("parts", parts);
+        body.set("contents", mapper.createArrayNode().add(content));
+
+        addJsonGenerationConfig(body);
+        return body;
+    }
+
+    /** JSON만 돌려주도록 강제. 모델이 설명문을 덧붙이는 것을 막아 파싱 실패를 줄인다. */
+    private void addJsonGenerationConfig(ObjectNode body) {
         ObjectNode generationConfig = mapper.createObjectNode();
         generationConfig.put("responseMimeType", "application/json");
         generationConfig.put("temperature", 0.7);
         body.set("generationConfig", generationConfig);
-
-        return body;
     }
 
     /** Gemini 응답 봉투에서 실제 생성 텍스트만 꺼낸다. */

@@ -14,6 +14,19 @@ public interface LlmClient {
      */
     String complete(String prompt);
 
+    /**
+     * 이미지와 함께 프롬프트를 보낸다(비전). base64는 data URL 접두사 없는 순수 인코딩 문자열이어야 한다.
+     * 이미지 입력을 지원하지 않는 구현체는 예외를 던지며, 호출한 쪽에서 폴백한다.
+     *
+     * @param prompt      지시문
+     * @param base64Image 순수 base64 (예: "/9j/4AAQ...")
+     * @param mimeType    예: "image/jpeg", "image/png"
+     * @throws LlmException 미지원 또는 호출 실패
+     */
+    default String completeWithImage(String prompt, String base64Image, String mimeType) {
+        throw new LlmException(providerName() + " 제공자는 이미지 입력을 지원하지 않습니다.");
+    }
+
     /** 로깅/디버깅용 제공자 이름. 예: "gemini", "mock" */
     String providerName();
 }

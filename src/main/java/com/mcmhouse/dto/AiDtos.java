@@ -23,4 +23,26 @@ public final class AiDtos {
             @Size(min = 1, max = 5, message = "답변은 1~5개여야 합니다.")
             List<@NotNull String> answers
     ) {}
+
+    /* ---------- A/B 이미지 선택 ---------- */
+
+    /** A/B 후보 House 1개(이미지 포함). */
+    public record StyleChoiceOption(String house, String title, String image) {}
+
+    /**
+     * A/B 이미지 선택 화면 조회 응답. 6문항 점수 1·2등 House를 후보로 내려준다.
+     * 이미지는 placeholder 경로이며 확정 이미지가 오면 House 쪽 값만 교체하면 된다.
+     */
+    public record StyleChoiceOptionsView(
+            Long resultId,
+            StyleChoiceOption optionA,
+            StyleChoiceOption optionB
+    ) {}
+
+    /** A/B 선택 제출. reason은 선택(생략 가능) — 없으면 LLM 호출 없이 선택한 House를 그대로 최종으로 채택한다. */
+    public record StyleChoiceRequest(
+            @NotNull(message = "chosenHouse는 필수입니다.")
+            String chosenHouse,
+            String reason
+    ) {}
 }

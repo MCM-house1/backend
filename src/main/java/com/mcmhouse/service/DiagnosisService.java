@@ -149,6 +149,50 @@ public class DiagnosisService {
         return ResultView.from(result);
     }
 
+    /**
+     * A/B 이미지 선택 화면에 내려줄 두 후보(6문항 점수 1·2등 House)를 조회한다.
+     */
+    @Transactional(readOnly = true)
+    public StyleChoiceOptionsView getStyleChoiceOptions(Long resultId) {
+        DiagnosisResult result = find(resultId);
+        List<House> topTwo = aiAnalysisService.topTwoHouses(result);
+        return new StyleChoiceOptionsView(result.getId(), toOption(topTwo.get(0)), toOption(topTwo.get(1)));
+    }
+
+    /**
+     * A/B 선택(+선택적 이유)을 받아 최종 House를 판별하고 결과를 반환한다.
+     * 기존 자연어 후속질문(ai/questions, ai/analyze)과는 별개의 대안 경로다.
+     */
+    @Transactional
+    public ResultView analyzeStyleChoice(Long resultId, StyleChoiceRequest req) {
+        DiagnosisResult result = find(resultId);
+        House chosen = parseHouseOrBadRequest(req.chosenHouse());
+
+        AiAnalysisService.Analysis analysis;
+        try {
+            analysis = aiAnalysisService.analyzeStyleChoice(result, chosen, req.reason());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(BAD_REQUEST, e.getMessage());
+        }
+
+        List<String> answers = req.reason() == null ? List.of() : List.of(req.reason());
+        result.applyAiAnalysis(answers, analysis.house(), analysis.summary(), analysis.reason(), analysis.fallback());
+        repository.save(result);
+        return ResultView.from(result);
+    }
+
+    private StyleChoiceOption toOption(House house) {
+        return new StyleChoiceOption(house.name(), house.getTitle(), house.getImage());
+    }
+
+    private House parseHouseOrBadRequest(String raw) {
+        try {
+            return House.valueOf(raw.trim().toUpperCase());
+        } catch (Exception e) {
+            throw new ResponseStatusException(BAD_REQUEST, "알 수 없는 House입니다: " + raw);
+        }
+    }
+
     /* ---------- 내부 ---------- */
 
     private DiagnosisResult find(Long resultId) {

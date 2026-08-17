@@ -14,7 +14,8 @@ public enum House {
             List.of("헤리티지", "클래식", "타임리스"),
             "LEGACY ZONE", "HERITAGE 탐험", "#8a6d3b",
             List.of("MCM-LEG-001", "MCM-LEG-002", "MCM-LEG-003"),
-            "시간이 쌓아온 가치"
+            "시간이 쌓아온 가치",
+            "/images/house/legacy.jpg"
     ),
     INSTINCT(
             "INSTINCT HOUSE",
@@ -22,7 +23,8 @@ public enum House {
             List.of("자기표현", "대담함", "개성"),
             "INSTINCT ZONE", "BOLD 탐험", "#b0413e",
             List.of("MCM-INS-001", "MCM-INS-002", "MCM-INS-003"),
-            "자신의 감각을 믿는 대담함"
+            "자신의 감각을 믿는 대담함",
+            "/images/house/instinct.jpg"
     ),
     FREEDOM(
             "FREEDOM HOUSE",
@@ -30,7 +32,8 @@ public enum House {
             List.of("자유로움", "모빌리티", "유연함"),
             "FREEDOM ZONE", "MOBILITY 탐험", "#3f6f6a",
             List.of("MCM-FRE-001", "MCM-FRE-002", "MCM-FRE-003"),
-            "얽매이지 않는 자유로움"
+            "얽매이지 않는 자유로움",
+            "/images/house/freedom.jpg"
     ),
     CURIOSITY(
             "CURIOSITY HOUSE",
@@ -38,7 +41,8 @@ public enum House {
             List.of("발견", "새로움", "실험정신"),
             "CURIOSITY ZONE", "DISCOVERY 탐험", "#5a4b8a",
             List.of("MCM-CUR-001", "MCM-CUR-002", "MCM-CUR-003"),
-            "새로운 것을 향한 호기심"
+            "새로운 것을 향한 호기심",
+            "/images/house/curiosity.jpg"
     );
 
     private final String title;
@@ -51,10 +55,12 @@ public enum House {
     private final List<String> recommendedProductIds;
     /** 복합형 설명문을 조합할 때 쓰는 명사구. 예: "시간이 쌓아온 가치" */
     private final String trait;
+    /** A/B 선택 등에 쓰는 House 대표 이미지 경로(placeholder). 확정 이미지 오면 교체. */
+    private final String image;
 
     House(String title, String description, List<String> tags,
           String zoneName, String zoneMission, String color,
-          List<String> recommendedProductIds, String trait) {
+          List<String> recommendedProductIds, String trait, String image) {
         this.title = title;
         this.description = description;
         this.tags = tags;
@@ -63,6 +69,7 @@ public enum House {
         this.color = color;
         this.recommendedProductIds = recommendedProductIds;
         this.trait = trait;
+        this.image = image;
     }
 
     public String getTitle() { return title; }
@@ -73,6 +80,7 @@ public enum House {
     public String getColor() { return color; }
     public List<String> getRecommendedProductIds() { return recommendedProductIds; }
     public String getTrait() { return trait; }
+    public String getImage() { return image; }
 
     /**
      * 복합형 제목. 동점 House를 "×"로 잇는다. 예: "LEGACY × CURIOSITY"

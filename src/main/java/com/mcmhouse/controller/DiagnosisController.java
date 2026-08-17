@@ -66,6 +66,23 @@ public class DiagnosisController {
         return service.analyzeAi(id, req);
     }
 
+    @Operation(summary = "[AI] A/B 스타일 이미지 후보 조회",
+            description = "6문항 점수 1·2등 House를 A/B 후보로 반환. 각 후보의 image는 House 대표 이미지 경로(현재 placeholder).")
+    @GetMapping("/results/{id}/ai/style-choice")
+    public StyleChoiceOptionsView styleChoiceOptions(@Parameter(description = "진단 결과 ID") @PathVariable Long id) {
+        return service.getStyleChoiceOptions(id);
+    }
+
+    @Operation(summary = "[AI] A/B 스타일 이미지 선택 제출",
+            description = "chosenHouse = A/B 후보 중 고른 House. reason은 선택(고른 이유 한 줄) — 생략하면 LLM 호출 없이 "
+                    + "선택한 House를 그대로 최종으로 채택한다. reason이 있으면 LLM이 선택+이유를 종합 판별하며, "
+                    + "실패 시 선택한 House로 폴백(ai.fallback=true).")
+    @PostMapping("/results/{id}/ai/style-choice")
+    public ResultView styleChoice(@Parameter(description = "진단 결과 ID") @PathVariable Long id,
+                                  @Valid @RequestBody StyleChoiceRequest req) {
+        return service.analyzeStyleChoice(id, req);
+    }
+
     @Operation(summary = "Zone 방문 인증(QR)",
             description = "scanValue = Zone QR/NFC 스캔값(예: \"LEGACY\", \"ZONE:FREEDOM\", 관련 URL). "
                     + "해당 House Stamp를 지급하고 현재 위치(currentZone)를 함께 갱신하며, "

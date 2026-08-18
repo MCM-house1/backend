@@ -34,9 +34,9 @@ public class StyleDiscovery {
     @Column(name = "photo_data_url", nullable = false)
     private String photoDataUrl;
 
-    /** 사용자가 미션에서 고른 상품 id(있으면). */
-    @Column(name = "selected_product_id")
-    private String selectedProductId;
+    /** AI가 셀카에서 특정한 상품 id. 특정 실패 시 null. */
+    @Column(name = "detected_product_id")
+    private String detectedProductId;
 
     /** 분석된 스타일 제목. 예: "깔끔하지만 평범하지 않게" */
     @Column(name = "style_title", length = 200)
@@ -66,11 +66,11 @@ public class StyleDiscovery {
 
     protected StyleDiscovery() {}
 
-    public StyleDiscovery(Long resultId, House house, String photoDataUrl, String selectedProductId) {
+    public StyleDiscovery(Long resultId, House house, String photoDataUrl, String detectedProductId) {
         this.resultId = resultId;
         this.house = house;
         this.photoDataUrl = photoDataUrl;
-        this.selectedProductId = selectedProductId;
+        this.detectedProductId = detectedProductId;
     }
 
     /** 분석 결과를 채운다. 재분석 시 덮어쓴다. */
@@ -83,9 +83,9 @@ public class StyleDiscovery {
         this.fallback = fallback;
     }
 
-    public void updatePhoto(String photoDataUrl, String selectedProductId) {
+    public void updatePhoto(String photoDataUrl, String detectedProductId) {
         this.photoDataUrl = photoDataUrl;
-        this.selectedProductId = selectedProductId;
+        this.detectedProductId = detectedProductId;
         this.createdAt = LocalDateTime.now();
     }
 
@@ -93,7 +93,7 @@ public class StyleDiscovery {
     public Long getResultId() { return resultId; }
     public House getHouse() { return house; }
     public String getPhotoDataUrl() { return photoDataUrl; }
-    public String getSelectedProductId() { return selectedProductId; }
+    public String getDetectedProductId() { return detectedProductId; }
     public String getStyleTitle() { return styleTitle; }
     public String getStyleDescription() { return styleDescription; }
     public List<String> getKeywords() { return keywords; }

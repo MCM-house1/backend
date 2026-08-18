@@ -13,12 +13,11 @@ public final class StyleDiscoveryDtos {
 
     /**
      * 셀카 무드 분석 요청. photo는 프론트 canvas.toDataURL 결과(data:image/jpeg;base64,...).
-     * selectedProductId는 필수 — "이 상품과 어울리는 걸 찾는다"가 핵심이라 상품 없이는 분석하지 않는다.
+     * 상품은 받지 않는다 — 미션에 상품을 고르는 화면이 없다. yourPick은 House별 고정 매핑으로 채운다.
      */
     public record StyleDiscoveryRequest(
             String photo,              // data URL. 없으면 폴백 분석
-            String house,              // 이 셀카가 속한 House 미션 (대문자)
-            String selectedProductId   // 필수. 없으면 400
+            String house               // 이 셀카가 속한 House 미션 (대문자)
     ) {}
 
     /** 미션 결과 화면(YOUR STYLE DISCOVERY) 응답. */
@@ -29,7 +28,7 @@ public final class StyleDiscoveryDtos {
             String styleDescription,
             List<String> styleKeywords,    // ["정돈된","도시적인","존재감 있는"]
             String impression,             // 이 스타일이 주는 인상
-            Product yourPick,              // 선택 상품(없으면 null)
+            Product yourPick,              // 내가 찾은 상품(House별 고정). 항상 채워진다
             List<MatchItem> completeTheLook,
             boolean fallback
     ) {}

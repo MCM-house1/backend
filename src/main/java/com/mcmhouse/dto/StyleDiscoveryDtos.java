@@ -11,11 +11,14 @@ public final class StyleDiscoveryDtos {
 
     private StyleDiscoveryDtos() {}
 
-    /** 셀카 무드 분석 요청. photo는 프론트 canvas.toDataURL 결과(data:image/jpeg;base64,...). */
+    /**
+     * 셀카 무드 분석 요청. photo는 프론트 canvas.toDataURL 결과(data:image/jpeg;base64,...).
+     * selectedProductId는 필수 — "이 상품과 어울리는 걸 찾는다"가 핵심이라 상품 없이는 분석하지 않는다.
+     */
     public record StyleDiscoveryRequest(
             String photo,              // data URL. 없으면 폴백 분석
             String house,              // 이 셀카가 속한 House 미션 (대문자)
-            String selectedProductId   // 선택한 상품(있으면). 없으면 null
+            String selectedProductId   // 필수. 없으면 400
     ) {}
 
     /** 미션 결과 화면(YOUR STYLE DISCOVERY) 응답. */

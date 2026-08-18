@@ -14,6 +14,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * A/B 이미지 선택(스타일 초이스) 판별 로직 검증.
+ * 사유 입력이 없는 방식이라 LLM을 호출하지 않고 항상 즉시 확정된다.
  */
 class AiAnalysisServiceStyleChoiceTest {
 
@@ -39,27 +40,15 @@ class AiAnalysisServiceStyleChoiceTest {
     }
 
     @Test
-    void 이유없이_선택하면_LLM_호출없이_그_House로_즉시_확정된다() {
+    void 선택하면_LLM_호출없이_그_House로_즉시_확정된다() {
         var service = new AiAnalysisService(FAILING_LLM, new QuestionCatalog());
         var result = resultWith(House.LEGACY, House.LEGACY, House.LEGACY,
                 House.CURIOSITY, House.CURIOSITY, House.FREEDOM);
 
-        var analysis = service.analyzeStyleChoice(result, House.CURIOSITY, null);
+        var analysis = service.analyzeStyleChoice(result, House.CURIOSITY);
 
         assertThat(analysis.house()).isEqualTo(House.CURIOSITY);
         assertThat(analysis.fallback()).isFalse();
-    }
-
-    @Test
-    void 이유가_있는데_LLM이_실패하면_선택한_House로_폴백한다() {
-        var service = new AiAnalysisService(FAILING_LLM, new QuestionCatalog());
-        var result = resultWith(House.LEGACY, House.LEGACY, House.LEGACY,
-                House.CURIOSITY, House.CURIOSITY, House.FREEDOM);
-
-        var analysis = service.analyzeStyleChoice(result, House.LEGACY, "오래된 것에 끌려요");
-
-        assertThat(analysis.house()).isEqualTo(House.LEGACY);
-        assertThat(analysis.fallback()).isTrue();
     }
 
     @Test
@@ -68,7 +57,7 @@ class AiAnalysisServiceStyleChoiceTest {
         var result = resultWith(House.LEGACY, House.LEGACY, House.LEGACY,
                 House.CURIOSITY, House.CURIOSITY, House.FREEDOM);
 
-        assertThatThrownBy(() -> service.analyzeStyleChoice(result, House.FREEDOM, null))
+        assertThatThrownBy(() -> service.analyzeStyleChoice(result, House.FREEDOM))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("1·2등");
     }

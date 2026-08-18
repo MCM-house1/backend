@@ -39,10 +39,9 @@ public final class AiDtos {
             StyleChoiceOption optionB
     ) {}
 
-    /** A/B 선택 제출. reason은 선택(생략 가능) — 없으면 LLM 호출 없이 선택한 House를 그대로 최종으로 채택한다. */
+    /** A/B 선택 제출. 사유 입력 없이 선택 하나로 최종 House를 확정한다(LLM 호출 없음). */
     public record StyleChoiceRequest(
             @NotNull(message = "chosenHouse는 필수입니다.")
-            String chosenHouse,
-            String reason
+            String chosenHouse
     ) {}
 }

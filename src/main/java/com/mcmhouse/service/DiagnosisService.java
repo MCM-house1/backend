@@ -160,7 +160,7 @@ public class DiagnosisService {
     }
 
     /**
-     * A/B 선택(+선택적 이유)을 받아 최종 House를 판별하고 결과를 반환한다.
+     * A/B 선택을 받아 최종 House를 판별하고 결과를 반환한다.
      * 기존 자연어 후속질문(ai/questions, ai/analyze)과는 별개의 대안 경로다.
      */
     @Transactional
@@ -170,13 +170,12 @@ public class DiagnosisService {
 
         AiAnalysisService.Analysis analysis;
         try {
-            analysis = aiAnalysisService.analyzeStyleChoice(result, chosen, req.reason());
+            analysis = aiAnalysisService.analyzeStyleChoice(result, chosen);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(BAD_REQUEST, e.getMessage());
         }
 
-        List<String> answers = req.reason() == null ? List.of() : List.of(req.reason());
-        result.applyAiAnalysis(answers, analysis.house(), analysis.summary(), analysis.reason(), analysis.fallback());
+        result.applyAiAnalysis(List.of(), analysis.house(), analysis.summary(), analysis.reason(), analysis.fallback());
         repository.save(result);
         return ResultView.from(result);
     }

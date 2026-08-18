@@ -291,94 +291,21 @@ public class AiAnalysisService {
     }
 
     /**
-     * 1·2등 House 중 사용자가 고른 쪽(+선택적 이유)을 근거로 최종 House를 판별한다.
-     * 이유가 없으면 LLM 없이 선택 결과를 그대로 채택한다(굳이 호출할 필요가 없는 확정적인 경우).
-     * 이유가 있으면 LLM이 두 후보 중 하나를 종합 판단하고, 실패 시 사용자가 고른 House로 폴백한다.
+     * 1·2등 House 중 사용자가 고른 쪽을 최종 House로 채택한다.
+     * 사유 입력 없이 이미지 선택 하나로 확정하는 방식이라 LLM을 호출하지 않는다.
      */
-    public Analysis analyzeStyleChoice(DiagnosisResult result, House chosen, String reason) {
+    public Analysis analyzeStyleChoice(DiagnosisResult result, House chosen) {
         List<House> topTwo = topTwoHouses(result);
         if (!topTwo.contains(chosen)) {
             throw new IllegalArgumentException("chosenHouse는 1·2등 House(" + topTwo + ") 중 하나여야 합니다: " + chosen);
         }
 
-        // 이유 없이 이미지만 골랐다면 그 선택을 그대로 최종으로 삼는다. LLM을 부를 이유가 없다.
-        if (reason == null || reason.isBlank()) {
-            House other = topTwo.get(0) == chosen ? topTwo.get(1) : topTwo.get(0);
-            return new Analysis(chosen,
-                    House.comboDescription(List.of(chosen)),
-                    "%s와(과) %s 중 %s의 이미지에 더 끌린다고 답해주셨어요."
-                            .formatted(topTwo.get(0).name(), other.name(), chosen.name()),
-                    false);
-        }
-
-        String prompt = buildStyleChoicePrompt(result, topTwo, chosen, reason);
-        try {
-            String raw = llm.complete(prompt);
-            JsonNode root = mapper.readTree(stripCodeFence(raw));
-
-            House house = parseHouse(root.path("house").asText(null));
-            String summary = root.path("summary").asText("").trim();
-            String choiceReason = root.path("reason").asText("").trim();
-
-            if (house == null || !topTwo.contains(house)) {
-                return fallbackStyleChoice(chosen);
-            }
-            return new Analysis(house, summary, choiceReason, false);
-
-        } catch (Exception e) {
-            log.warn("A/B 선택 판별 실패 → 사용자가 고른 House로 폴백. resultId={}, provider={}, 원인={}",
-                    result.getId(), llm.providerName(), e.getMessage());
-            return fallbackStyleChoice(chosen);
-        }
-    }
-
-    private String buildStyleChoicePrompt(DiagnosisResult result, List<House> topTwo, House chosen, String reason) {
         House other = topTwo.get(0) == chosen ? topTwo.get(1) : topTwo.get(0);
-        return """
-                %s
-                당신은 패션 브랜드 MCM의 팝업 전시에서 방문객의 '아이덴티티'를 판별하는 큐레이터입니다.
-
-                # House 정의
-                %s
-
-                # 방문객의 객관식 응답
-                %s
-
-                객관식 점수 집계(참고용, 절대 기준은 아님):
-                %s
-
-                # 방문객에게 제시한 A/B 이미지
-                두 후보(%s / %s) 중 더 끌리는 이미지를 고르게 했습니다.
-
-                # 방문객의 선택
-                선택한 이미지: %s
-                고른 이유: %s
-
-                # 할 일
-                위 자료를 종합해 %s 와(과) %s 중 이 방문객에게 최종적으로 더 잘 맞는 House 하나를 고르세요.
-
-                # 규칙
-                - 원칙적으로는 방문객이 고른 이미지(%s)를 존중하세요.
-                - 다만 방문객이 남긴 이유가 고른 이미지보다 다른 후보(%s)의 정의에 훨씬 더 뚜렷하게 부합한다면 그쪽을 선택해도 됩니다.
-                - summary는 방문객에게 그대로 보여줄 문장입니다. 한국어 존댓말로 2문장 이내, 따뜻하게 씁니다.
-                - reason은 왜 그 House인지에 대한 근거입니다. 방문객이 남긴 이유를 인용하며 2문장 이내로 씁니다.
-
-                # 출력 형식
-                아래 JSON만 출력하세요. 설명이나 코드펜스를 덧붙이지 마세요.
-                house는 반드시 %s 또는 %s 여야 합니다.
-                {"house": "%s", "summary": "...", "reason": "..."}
-                """
-                .formatted(MockLlmClient.TASK_ANALYZE, describeHouses(), describeAnswers(result), describeScores(result),
-                        topTwo.get(0).name(), topTwo.get(1).name(),
-                        chosen.name(), reason,
-                        topTwo.get(0).name(), topTwo.get(1).name(),
-                        chosen.name(), other.name(),
-                        topTwo.get(0).name(), topTwo.get(1).name(), chosen.name());
-    }
-
-    private Analysis fallbackStyleChoice(House chosen) {
-        return new Analysis(chosen, House.comboDescription(List.of(chosen)),
-                "AI 분석을 사용할 수 없어 선택하신 이미지(" + chosen.name() + ")로 안내합니다.", true);
+        return new Analysis(chosen,
+                House.comboDescription(List.of(chosen)),
+                "%s와(과) %s 중 %s의 이미지에 더 끌린다고 답해주셨어요."
+                        .formatted(topTwo.get(0).name(), other.name(), chosen.name()),
+                false);
     }
 
     /* ==================== 반환 타입 ==================== */

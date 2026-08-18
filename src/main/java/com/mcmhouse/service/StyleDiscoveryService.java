@@ -57,7 +57,10 @@ public class StyleDiscoveryService {
 
     /**
      * 셀카 무드 분석 + 저장. House당 최신 1건을 유지한다.
-     * selectedProductId는 필수다 — "이 상품과 어울리는 걸 찾아준다"가 핵심이라 상품 없이는 분석하지 않는다.
+     *
+     * <p>selectedProductId는 선택이다. 미션 화면에서 상품을 고르는 단계가 없으므로,
+     * 값이 없으면 셀카에서 AI가 상품을 찾아낸다. 이때 후보는 해당 House의 상품으로 한정한다 —
+     * 전체 27개를 열어두면 오답이 늘고, 방문객은 그 House의 Zone에서 촬영했기 때문이다.
      */
     @Transactional
     public StyleDiscoveryView analyze(Long resultId, StyleDiscoveryRequest req) {
@@ -65,26 +68,24 @@ public class StyleDiscoveryService {
             throw new ResponseStatusException(NOT_FOUND, "진단 결과를 찾을 수 없습니다: " + resultId);
         }
         House house = parseHouse(req.house());
-        if (req.selectedProductId() == null || req.selectedProductId().isBlank()) {
-            throw new ResponseStatusException(BAD_REQUEST, "selectedProductId는 필수입니다.");
-        }
-        Product selected = products.findById(req.selectedProductId());
-        if (selected == null) {
-            throw new ResponseStatusException(BAD_REQUEST, "상품을 찾을 수 없습니다: " + req.selectedProductId());
+
+        // 프론트가 상품을 지정했다면 그대로 쓰고, 없으면 AI가 셀카에서 찾는다.
+        Product given = null;
+        if (req.selectedProductId() != null && !req.selectedProductId().isBlank()) {
+            given = products.findById(req.selectedProductId());
+            if (given == null) {
+                throw new ResponseStatusException(BAD_REQUEST, "상품을 찾을 수 없습니다: " + req.selectedProductId());
+            }
         }
 
-        // 매치 후보는 House로 좁히지 않고 전체 상품에서 고른다 — "선택한 상품과 어울리는가"가 우선이다.
-        List<Product> candidates = products.all().stream()
-                .filter(p -> !p.id().equals(selected.id()))
-                .toList();
-
-        Analysis analysis = runAnalysis(house, selected, candidates, req.photo());
+        Analysis analysis = runAnalysis(house, given, req.photo());
+        Product pick = analysis.pick;
+        String pickId = pick == null ? null : pick.id();
 
         // House당 1건 upsert
         StyleDiscovery entity = discoveryRepository.findByResultIdAndHouse(resultId, house)
-                .orElseGet(() -> new StyleDiscovery(resultId, house,
-                        nullToEmpty(req.photo()), req.selectedProductId()));
-        entity.updatePhoto(nullToEmpty(req.photo()), req.selectedProductId());
+                .orElseGet(() -> new StyleDiscovery(resultId, house, nullToEmpty(req.photo()), pickId));
+        entity.updatePhoto(nullToEmpty(req.photo()), pickId);
         entity.applyAnalysis(analysis.title, analysis.description, analysis.keywords,
                 analysis.impression, analysis.fallback);
         StyleDiscovery saved = discoveryRepository.save(entity);
@@ -92,7 +93,7 @@ public class StyleDiscoveryService {
         return new StyleDiscoveryView(
                 saved.getId(), house.name(),
                 analysis.title, analysis.description, analysis.keywords, analysis.impression,
-                selected, analysis.matches, analysis.fallback
+                pick, given == null && pick != null, analysis.matches, analysis.fallback
         );
     }
 
@@ -111,13 +112,13 @@ public class StyleDiscoveryService {
 
     /* ---------- 내부: 분석 ---------- */
 
-    private Analysis runAnalysis(House house, Product selected, List<Product> candidates, String photo) {
+    private Analysis runAnalysis(House house, Product given, String photo) {
         String base64 = extractBase64(photo);
-        if (base64 == null) {                        // 이미지 없음 → 폴백
-            return fallback(house, selected, candidates);
+        if (base64 == null) {                        // 이미지 없음 → 상품을 찾을 근거가 없다
+            return fallback(house, given);
         }
         try {
-            String prompt = buildPrompt(house, selected, candidates);
+            String prompt = buildPrompt(house, given);
             JsonNode root = mapper.readTree(stripCodeFence(
                     llm.completeWithImage(prompt, base64, extractMime(photo))));
 
@@ -129,85 +130,130 @@ public class StyleDiscoveryService {
             for (JsonNode k : root.path("keywords")) {
                 if (keywords.size() < KEYWORD_COUNT && !k.asText("").isBlank()) keywords.add(k.asText().trim());
             }
+
+            // 상품을 지정받지 않았다면 AI가 고른 것을 쓴다. 해당 House의 상품만 인정한다.
+            Product pick = given;
+            if (pick == null) {
+                Product detected = products.findById(root.path("pickedProductId").asText("").trim());
+                if (detected != null && detected.house() == house) {
+                    pick = detected;
+                }
+            }
+
             List<MatchItem> matches = new ArrayList<>();
             for (JsonNode m : root.path("matches")) {
                 Product matched = products.findById(m.path("id").asText(""));
-                if (matched != null && matches.size() < MATCH_COUNT) {
+                boolean isPick = matched != null && pick != null && matched.id().equals(pick.id());
+                if (matched != null && !isPick && matches.size() < MATCH_COUNT) {
                     matches.add(new MatchItem(matched, m.path("reason").asText("").trim()));
                 }
             }
             if (title.isBlank() || keywords.isEmpty() || matches.isEmpty()) {
-                return fallback(house, selected, candidates);
+                return fallback(house, pick);
             }
-            return new Analysis(title, description, keywords, impression, matches, false);
+            return new Analysis(title, description, keywords, impression, pick, matches, false);
 
         } catch (Exception e) {
             log.warn("셀카 무드 분석 실패 → 폴백. house={}, provider={}, 원인={}",
                     house, llm.providerName(), e.getMessage());
-            return fallback(house, selected, candidates);
+            return fallback(house, given);
         }
     }
 
     /**
-     * 무게중심은 "선택한 상품과 어울리는가"다. 셀카는 무드를 참고하는 보조 정보로만 쓴다.
-     * matches 후보는 House로 좁히지 않은 전체 상품이다.
+     * 무게중심은 "기준 상품과 어울리는가"다. 셀카는 무드를 참고하는 보조 정보로 쓴다.
+     *
+     * <p>기준 상품을 지정받지 못했으면, 같은 셀카로 상품 특정까지 함께 시킨다.
+     * 호출을 두 번으로 나누면 응답이 느려지고 두 판단이 어긋날 수 있어 한 번에 처리한다.
+     * 상품 후보는 해당 House로 한정해 객관식으로 만든다 — 서술형으로 물으면 없는 상품을 지어낸다.
      */
-    private String buildPrompt(House house, Product selected, List<Product> candidates) {
-        StringBuilder list = new StringBuilder();
-        for (Product p : candidates) {
-            list.append("- id=%s | %s | %,d원 | %s | %s House%n"
-                    .formatted(p.id(), p.name(), p.price(), p.category(), p.house()));
-        }
+    private String buildPrompt(House house, Product given) {
+        String matchPool = describeProducts(products.all().stream()
+                .filter(p -> given == null || !p.id().equals(given.id()))
+                .toList());
+
+        String baseSection = given != null
+                ? """
+                  # 기준 상품 (방문객이 고른 상품)
+                  %s (%,d원, %s, %s House)
+                  """.formatted(given.name(), given.price(), given.category(), given.house())
+                : """
+                  # 기준 상품 — 셀카에서 직접 찾아야 합니다
+                  방문객은 아래 상품 중 하나를 들거나 착용한 채 촬영했습니다.
+                  셀카를 보고 어떤 상품인지 특정해 pickedProductId에 그 id를 쓰세요.
+
+                  %s
+
+                  확신이 서지 않으면 형태·색·카테고리가 가장 가까운 것을 고르세요.
+                  목록에 없는 id를 지어내면 안 됩니다.
+                  """.formatted(describeProducts(products.forHouse(house)));
+
+        String pickField = given != null ? "" : "\"pickedProductId\":\"위 목록의 id\",";
+        String pickTask = given != null ? ""
+                : "0. pickedProductId: 셀카 속 인물이 들거나 착용한 상품의 id (위 기준 상품 후보 중에서).\n                ";
 
         return """
                 당신은 패션 브랜드 MCM의 스타일 큐레이터입니다.
 
-                # 핵심 기준 상품 (방문객이 미션에서 고른 상품)
-                %s (%,d원, %s, %s House)
-
+                %s
                 # 참고 정보
                 방문객의 House: %s — %s (%s)
-                방문객이 매장에서 찍은 거울 셀카가 함께 제공됩니다. 셀카는 무드(색감, 실루엣, 분위기) 참고용 보조 정보입니다.
+                방문객이 매장에서 찍은 거울 셀카가 함께 제공됩니다.
 
                 # 매치 후보 상품 (전체 House)
                 %s
 
                 # 할 일
-                **핵심 기준 상품과 진짜 잘 어울리는 조합**을 만드는 것이 목적입니다. 셀카는 그 판단을 보조할 뿐입니다.
-                1. styleTitle: 이 사람의 스타일을 한 문장으로. 예) "깔끔하지만 평범하지 않게"
+                **기준 상품과 진짜 잘 어울리는 조합**을 만드는 것이 목적입니다.
+                %s1. styleTitle: 이 사람의 스타일을 한 문장으로. 예) "깔끔하지만 평범하지 않게"
                 2. styleDescription: 어떤 스타일을 선호하는지 2문장 이내로 서술.
                 3. keywords: 스타일을 요약하는 키워드 %d개. 예) 정돈된, 도시적인, 존재감 있는
                 4. impression: 이 스타일이 주는 인상 2문장 이내.
-                5. matches: 위 후보 중 **핵심 기준 상품과 스타일이 진짜 잘 어울리는** 상품 %d개를 골라 각각 왜 어울리는지 1문장.
+                5. matches: 매치 후보 중 **기준 상품과 스타일이 진짜 잘 어울리는** 상품 %d개를 골라 각각 왜 어울리는지 1문장.
 
                 # 규칙
-                - matches를 고를 때 기준은 핵심 기준 상품과의 스타일 궁합입니다. House가 같은지는 부차적입니다.
+                - matches를 고를 때 기준은 기준 상품과의 스타일 궁합입니다. House가 같은지는 부차적입니다.
+                - matches에 기준 상품 자신을 넣지 마세요.
                 - 셀카 속 인물의 외모/신원을 묘사하거나 추측하지 말 것. 스타일·무드만.
                 - 한국어 존댓말, 따뜻하고 감각적인 톤.
-                - matches의 id는 반드시 후보 목록의 id를 그대로 쓸 것.
+                - 모든 id는 반드시 위 목록의 id를 그대로 쓸 것.
 
                 # 출력 형식 (JSON만, 코드펜스 없이)
-                {"styleTitle":"...","styleDescription":"...","keywords":["..","..",".."],"impression":"...","matches":[{"id":"후보id","reason":"..."},{"id":"후보id","reason":"..."}]}
+                {%s"styleTitle":"...","styleDescription":"...","keywords":["..","..",".."],"impression":"...","matches":[{"id":"후보id","reason":"..."},{"id":"후보id","reason":"..."}]}
                 """
-                .formatted(selected.name(), selected.price(), selected.category(), selected.house(),
-                        house.getTitle(), house.getDescription(), String.join(", ", house.getTags()),
-                        list.toString().trim(), KEYWORD_COUNT, MATCH_COUNT);
+                .formatted(baseSection, house.getTitle(), house.getDescription(),
+                        String.join(", ", house.getTags()), matchPool,
+                        pickTask, KEYWORD_COUNT, MATCH_COUNT, pickField);
+    }
+
+    /** 프롬프트에 넣을 상품 목록 한 덩어리. */
+    private String describeProducts(List<Product> list) {
+        StringBuilder sb = new StringBuilder();
+        for (Product p : list) {
+            sb.append("- id=%s | %s | %,d원 | %s | %s House%n"
+                    .formatted(p.id(), p.name(), p.price(), p.category(), p.house()));
+        }
+        return sb.toString().trim();
     }
 
     /**
      * 이미지 없음/실패 시 폴백. 매치는 선택 상품과 같은 House를 우선하되 전체 후보에서 채운다.
      */
-    private Analysis fallback(House house, Product selected, List<Product> candidates) {
+    private Analysis fallback(House house, Product pick) {
+        House base = pick == null ? house : pick.house();
+        List<Product> pool = products.all().stream()
+                .filter(p -> pick == null || !p.id().equals(pick.id()))
+                .toList();
+
         List<Product> sameHouseFirst = new ArrayList<>();
-        candidates.stream().filter(p -> p.house() == selected.house()).forEach(sameHouseFirst::add);
-        candidates.stream().filter(p -> p.house() != selected.house()).forEach(sameHouseFirst::add);
+        pool.stream().filter(p -> p.house() == base).forEach(sameHouseFirst::add);
+        pool.stream().filter(p -> p.house() != base).forEach(sameHouseFirst::add);
 
         List<MatchItem> matches = new ArrayList<>();
         for (Product p : sameHouseFirst) {
             if (matches.size() >= MATCH_COUNT) break;
-            boolean sameHouse = p.house() == selected.house();
-            matches.add(new MatchItem(p, sameHouse
-                    ? "같은 " + selected.house().name() + " 무드의 아이템이라 함께 매치하기 좋아요."
+            matches.add(new MatchItem(p, p.house() == base
+                    ? "같은 " + base.name() + " 무드의 아이템이라 함께 매치하기 좋아요."
                     : "스타일 결이 비슷해 함께 매치하기 좋아요."));
         }
         return new Analysis(
@@ -215,7 +261,7 @@ public class StyleDiscoveryService {
                 house.getDescription(),
                 new ArrayList<>(house.getTags()),
                 "%s의 취향이 분명하게 드러나는 스타일이에요.".formatted(house.name()),
-                matches, true
+                pick, matches, true
         );
     }
 
@@ -259,6 +305,9 @@ public class StyleDiscoveryService {
         return t;
     }
 
+    /**
+     * @param pick 기준 상품. 프론트가 지정했거나 AI가 셀카에서 찾은 것. 둘 다 없으면 null
+     */
     private record Analysis(String title, String description, List<String> keywords,
-                            String impression, List<MatchItem> matches, boolean fallback) {}
+                            String impression, Product pick, List<MatchItem> matches, boolean fallback) {}
 }

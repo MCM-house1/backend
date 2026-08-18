@@ -22,7 +22,8 @@ import static org.mockito.Mockito.when;
 
 /**
  * 셀카 무드 분석 검증.
- * selectedProductId는 필수이며(없으면 400), 매치 후보는 House로 좁히지 않은 전체 상품이다.
+ * selectedProductId는 선택이며, 없으면 AI가 셀카에서 해당 House 상품 중 하나를 특정한다.
+ * 매치 후보는 House로 좁히지 않은 전체 상품이다.
  * 비전이 실패해도(또는 이미지가 없어도) 폴백으로 안전하게 결과가 채워지는지 본다.
  */
 class StyleDiscoveryServiceTest {
@@ -37,6 +38,26 @@ class StyleDiscoveryServiceTest {
         @Override public String providerName() { return "failing"; }
     };
 
+    /** 사진에서 지정한 상품을 골라내는 비전 LLM 스텁. */
+    private static LlmClient visionPicking(String pickedId) {
+        String json = """
+                {"pickedProductId":"%s","styleTitle":"차분한 대비",
+                 "styleDescription":"군더더기 없는 선을 좋아하시는 편이에요.",
+                 "keywords":["정돈된","도시적인","존재감 있는"],
+                 "impression":"단정하면서도 시선이 머무는 인상이에요.",
+                 "matches":[{"id":"03_REC1","reason":"결이 비슷해요."},
+                            {"id":"04_REC1","reason":"함께 두면 균형이 좋아요."}]}
+                """.formatted(pickedId);
+        return new LlmClient() {
+            @Override public String complete(String prompt) { return json; }
+            @Override public String completeWithImage(String p, String b, String m) { return json; }
+            @Override public String providerName() { return "stub"; }
+        };
+    }
+
+    private DiagnosisResultRepository resultRepo;
+    private StyleDiscoveryRepository discoveryRepo;
+
     @BeforeEach
     void setUp() throws Exception {
         products = new ProductCatalog();
@@ -44,14 +65,19 @@ class StyleDiscoveryServiceTest {
         load.setAccessible(true);
         load.invoke(products);
 
-        var resultRepo = mock(DiagnosisResultRepository.class);
+        resultRepo = mock(DiagnosisResultRepository.class);
         when(resultRepo.existsById(anyLong())).thenReturn(true);
 
-        var discoveryRepo = mock(StyleDiscoveryRepository.class);
+        discoveryRepo = mock(StyleDiscoveryRepository.class);
         when(discoveryRepo.findByResultIdAndHouse(anyLong(), any())).thenReturn(Optional.empty());
         when(discoveryRepo.save(any(StyleDiscovery.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        service = new StyleDiscoveryService(FAILING_LLM, products, resultRepo, discoveryRepo);
+        service = serviceWith(FAILING_LLM);
+    }
+
+    /** 같은 카탈로그/저장소에 LLM만 바꿔 끼운 서비스. */
+    private StyleDiscoveryService serviceWith(LlmClient llm) {
+        return new StyleDiscoveryService(llm, products, resultRepo, discoveryRepo);
     }
 
     @Test
@@ -79,11 +105,46 @@ class StyleDiscoveryServiceTest {
     }
 
     @Test
-    void selectedProductId가_없으면_거부한다() {
+    void selectedProductId가_없으면_AI가_사진에서_상품을_찾는다() {
+        var service = serviceWith(visionPicking("01_REC3"));
         var req = new StyleDiscoveryRequest("data:image/jpeg;base64,AAAA", "LEGACY", null);
 
+        StyleDiscoveryView view = service.analyze(1L, req);
+
+        assertThat(view.fallback()).isFalse();
+        assertThat(view.yourPick().id()).isEqualTo("01_REC3");
+        assertThat(view.productDetected()).isTrue();
+    }
+
+    @Test
+    void AI가_다른_House_상품을_고르면_인정하지_않는다() {
+        // LEGACY 미션인데 INSTINCT 상품(02_REC1)을 골라온 경우
+        var service = serviceWith(visionPicking("02_REC1"));
+        var req = new StyleDiscoveryRequest("data:image/jpeg;base64,AAAA", "LEGACY", null);
+
+        StyleDiscoveryView view = service.analyze(1L, req);
+
+        assertThat(view.yourPick()).isNull();
+        assertThat(view.productDetected()).isFalse();
+    }
+
+    @Test
+    void 프론트가_상품을_지정하면_AI_추정을_쓰지_않는다() {
+        var service = serviceWith(visionPicking("01_REC3"));
+        var req = new StyleDiscoveryRequest("data:image/jpeg;base64,AAAA", "LEGACY", "01_REC1");
+
+        StyleDiscoveryView view = service.analyze(1L, req);
+
+        assertThat(view.yourPick().id()).isEqualTo("01_REC1");
+        assertThat(view.productDetected()).isFalse();
+    }
+
+    @Test
+    void 없는_상품_id를_보내면_거부한다() {
+        var req = new StyleDiscoveryRequest("data:image/jpeg;base64,AAAA", "LEGACY", "없는상품");
+
         assertThatThrownBy(() -> service.analyze(1L, req))
-                .hasMessageContaining("selectedProductId");
+                .hasMessageContaining("상품을 찾을 수 없습니다");
     }
 
     @Test

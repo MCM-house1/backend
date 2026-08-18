@@ -55,17 +55,27 @@ public class StyleDiscoveryService {
         this.discoveryRepository = discoveryRepository;
     }
 
-    /** 셀카 무드 분석 + 저장. House당 최신 1건을 유지한다. */
+    /**
+     * 셀카 무드 분석 + 저장. House당 최신 1건을 유지한다.
+     * selectedProductId는 필수다 — "이 상품과 어울리는 걸 찾아준다"가 핵심이라 상품 없이는 분석하지 않는다.
+     */
     @Transactional
     public StyleDiscoveryView analyze(Long resultId, StyleDiscoveryRequest req) {
         if (!resultRepository.existsById(resultId)) {
             throw new ResponseStatusException(NOT_FOUND, "진단 결과를 찾을 수 없습니다: " + resultId);
         }
         House house = parseHouse(req.house());
-        Product selected = req.selectedProductId() == null ? null : products.findById(req.selectedProductId());
+        if (req.selectedProductId() == null || req.selectedProductId().isBlank()) {
+            throw new ResponseStatusException(BAD_REQUEST, "selectedProductId는 필수입니다.");
+        }
+        Product selected = products.findById(req.selectedProductId());
+        if (selected == null) {
+            throw new ResponseStatusException(BAD_REQUEST, "상품을 찾을 수 없습니다: " + req.selectedProductId());
+        }
 
-        List<Product> candidates = products.forHouse(house).stream()
-                .filter(p -> selected == null || !p.id().equals(selected.id()))
+        // 매치 후보는 House로 좁히지 않고 전체 상품에서 고른다 — "선택한 상품과 어울리는가"가 우선이다.
+        List<Product> candidates = products.all().stream()
+                .filter(p -> !p.id().equals(selected.id()))
                 .toList();
 
         Analysis analysis = runAnalysis(house, selected, candidates, req.photo());
@@ -104,7 +114,7 @@ public class StyleDiscoveryService {
     private Analysis runAnalysis(House house, Product selected, List<Product> candidates, String photo) {
         String base64 = extractBase64(photo);
         if (base64 == null) {                        // 이미지 없음 → 폴백
-            return fallback(house, candidates);
+            return fallback(house, selected, candidates);
         }
         try {
             String prompt = buildPrompt(house, selected, candidates);
@@ -127,47 +137,51 @@ public class StyleDiscoveryService {
                 }
             }
             if (title.isBlank() || keywords.isEmpty() || matches.isEmpty()) {
-                return fallback(house, candidates);
+                return fallback(house, selected, candidates);
             }
             return new Analysis(title, description, keywords, impression, matches, false);
 
         } catch (Exception e) {
             log.warn("셀카 무드 분석 실패 → 폴백. house={}, provider={}, 원인={}",
                     house, llm.providerName(), e.getMessage());
-            return fallback(house, candidates);
+            return fallback(house, selected, candidates);
         }
     }
 
+    /**
+     * 무게중심은 "선택한 상품과 어울리는가"다. 셀카는 무드를 참고하는 보조 정보로만 쓴다.
+     * matches 후보는 House로 좁히지 않은 전체 상품이다.
+     */
     private String buildPrompt(House house, Product selected, List<Product> candidates) {
         StringBuilder list = new StringBuilder();
         for (Product p : candidates) {
-            list.append("- id=%s | %s | %,d원 | %s%n".formatted(p.id(), p.name(), p.price(), p.category()));
+            list.append("- id=%s | %s | %,d원 | %s | %s House%n"
+                    .formatted(p.id(), p.name(), p.price(), p.category(), p.house()));
         }
-        String selectedLine = selected == null ? "(선택한 상품 없음)"
-                : "%s (%,d원, %s)".formatted(selected.name(), selected.price(), selected.category());
 
         return """
                 당신은 패션 브랜드 MCM의 스타일 큐레이터입니다.
-                방문객이 매장에서 찍은 거울 셀카가 함께 제공됩니다.
 
-                # 방문객의 House
-                %s — %s (%s)
+                # 핵심 기준 상품 (방문객이 미션에서 고른 상품)
+                %s (%,d원, %s, %s House)
 
-                # 방문객이 미션에서 고른 상품
-                %s
+                # 참고 정보
+                방문객의 House: %s — %s (%s)
+                방문객이 매장에서 찍은 거울 셀카가 함께 제공됩니다. 셀카는 무드(색감, 실루엣, 분위기) 참고용 보조 정보입니다.
 
-                # 함께 매치할 후보 상품 (같은 House)
+                # 매치 후보 상품 (전체 House)
                 %s
 
                 # 할 일
-                셀카에서 드러나는 무드(색감, 실루엣, 분위기)를 읽어 이 방문객의 스타일을 분석합니다.
+                **핵심 기준 상품과 진짜 잘 어울리는 조합**을 만드는 것이 목적입니다. 셀카는 그 판단을 보조할 뿐입니다.
                 1. styleTitle: 이 사람의 스타일을 한 문장으로. 예) "깔끔하지만 평범하지 않게"
                 2. styleDescription: 어떤 스타일을 선호하는지 2문장 이내로 서술.
                 3. keywords: 스타일을 요약하는 키워드 %d개. 예) 정돈된, 도시적인, 존재감 있는
                 4. impression: 이 스타일이 주는 인상 2문장 이내.
-                5. matches: 위 후보 중 이 무드와 잘 어울리는 상품 %d개를 골라 각각 왜 어울리는지 1문장.
+                5. matches: 위 후보 중 **핵심 기준 상품과 스타일이 진짜 잘 어울리는** 상품 %d개를 골라 각각 왜 어울리는지 1문장.
 
                 # 규칙
+                - matches를 고를 때 기준은 핵심 기준 상품과의 스타일 궁합입니다. House가 같은지는 부차적입니다.
                 - 셀카 속 인물의 외모/신원을 묘사하거나 추측하지 말 것. 스타일·무드만.
                 - 한국어 존댓말, 따뜻하고 감각적인 톤.
                 - matches의 id는 반드시 후보 목록의 id를 그대로 쓸 것.
@@ -175,16 +189,26 @@ public class StyleDiscoveryService {
                 # 출력 형식 (JSON만, 코드펜스 없이)
                 {"styleTitle":"...","styleDescription":"...","keywords":["..","..",".."],"impression":"...","matches":[{"id":"후보id","reason":"..."},{"id":"후보id","reason":"..."}]}
                 """
-                .formatted(house.getTitle(), house.getDescription(), String.join(", ", house.getTags()),
-                        selectedLine, list.toString().trim(), KEYWORD_COUNT, MATCH_COUNT);
+                .formatted(selected.name(), selected.price(), selected.category(), selected.house(),
+                        house.getTitle(), house.getDescription(), String.join(", ", house.getTags()),
+                        list.toString().trim(), KEYWORD_COUNT, MATCH_COUNT);
     }
 
-    /** 이미지 없음/실패 시: House 기반 스타일 + 같은 House 상품 매치. */
-    private Analysis fallback(House house, List<Product> candidates) {
+    /**
+     * 이미지 없음/실패 시 폴백. 매치는 선택 상품과 같은 House를 우선하되 전체 후보에서 채운다.
+     */
+    private Analysis fallback(House house, Product selected, List<Product> candidates) {
+        List<Product> sameHouseFirst = new ArrayList<>();
+        candidates.stream().filter(p -> p.house() == selected.house()).forEach(sameHouseFirst::add);
+        candidates.stream().filter(p -> p.house() != selected.house()).forEach(sameHouseFirst::add);
+
         List<MatchItem> matches = new ArrayList<>();
-        for (Product p : candidates) {
+        for (Product p : sameHouseFirst) {
             if (matches.size() >= MATCH_COUNT) break;
-            matches.add(new MatchItem(p, "같은 " + house.name() + " 무드의 아이템이라 함께 매치하기 좋아요."));
+            boolean sameHouse = p.house() == selected.house();
+            matches.add(new MatchItem(p, sameHouse
+                    ? "같은 " + selected.house().name() + " 무드의 아이템이라 함께 매치하기 좋아요."
+                    : "스타일 결이 비슷해 함께 매치하기 좋아요."));
         }
         return new Analysis(
                 house.getTitle() + " 무드",

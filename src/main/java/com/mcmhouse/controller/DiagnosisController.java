@@ -74,9 +74,7 @@ public class DiagnosisController {
     }
 
     @Operation(summary = "[AI] A/B 스타일 이미지 선택 제출",
-            description = "chosenHouse = A/B 후보 중 고른 House. reason은 선택(고른 이유 한 줄) — 생략하면 LLM 호출 없이 "
-                    + "선택한 House를 그대로 최종으로 채택한다. reason이 있으면 LLM이 선택+이유를 종합 판별하며, "
-                    + "실패 시 선택한 House로 폴백(ai.fallback=true).")
+            description = "chosenHouse = A/B 후보 중 고른 House. 사유 입력 없이 선택 하나로 즉시 최종 House를 확정한다(LLM 호출 없음).")
     @PostMapping("/results/{id}/ai/style-choice")
     public ResultView styleChoice(@Parameter(description = "진단 결과 ID") @PathVariable Long id,
                                   @Valid @RequestBody StyleChoiceRequest req) {

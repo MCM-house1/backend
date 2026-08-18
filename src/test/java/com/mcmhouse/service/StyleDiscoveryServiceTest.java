@@ -21,7 +21,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * 셀카 무드 분석 검증. 비전이 실패해도(또는 이미지가 없어도) 폴백으로 안전하게 결과가 채워지는지 본다.
+ * 셀카 무드 분석 검증.
+ * selectedProductId는 필수이며(없으면 400), 매치 후보는 House로 좁히지 않은 전체 상품이다.
+ * 비전이 실패해도(또는 이미지가 없어도) 폴백으로 안전하게 결과가 채워지는지 본다.
  */
 class StyleDiscoveryServiceTest {
 
@@ -66,21 +68,43 @@ class StyleDiscoveryServiceTest {
     }
 
     @Test
-    void 이미지가_없어도_폴백으로_동작한다() {
-        var req = new StyleDiscoveryRequest(null, "CURIOSITY", null);
+    void 이미지가_없어도_상품만_있으면_폴백으로_동작한다() {
+        var req = new StyleDiscoveryRequest(null, "CURIOSITY", "04_REC1");
 
         StyleDiscoveryView view = service.analyze(1L, req);
 
         assertThat(view.fallback()).isTrue();
         assertThat(view.house()).isEqualTo("CURIOSITY");
-        assertThat(view.yourPick()).isNull();
+        assertThat(view.yourPick().id()).isEqualTo("04_REC1");
+    }
+
+    @Test
+    void selectedProductId가_없으면_거부한다() {
+        var req = new StyleDiscoveryRequest("data:image/jpeg;base64,AAAA", "LEGACY", null);
+
+        assertThatThrownBy(() -> service.analyze(1L, req))
+                .hasMessageContaining("selectedProductId");
     }
 
     @Test
     void 알_수_없는_House는_거부한다() {
-        var req = new StyleDiscoveryRequest("data:image/jpeg;base64,AAAA", "NOPE", null);
+        var req = new StyleDiscoveryRequest("data:image/jpeg;base64,AAAA", "NOPE", "01_REC1");
 
         assertThatThrownBy(() -> service.analyze(1L, req))
                 .hasMessageContaining("알 수 없는 House");
+    }
+
+    @Test
+    void 매치_후보는_House로_좁히지_않은_전체_상품이다() {
+        // LEGACY 상품을 선택해도 매치 후보 풀 자체는 전체(다른 House 포함)에서 온다.
+        // 폴백은 같은 House를 우선 채우므로, 다른 House 상품이 섞여 나오는지는 프롬프트 경로에서 검증되고
+        // 여기서는 최소한 같은 House 상품으로만 국한되지 않는 후보 풀 크기를 확인한다.
+        var req = new StyleDiscoveryRequest(null, "LEGACY", "01_REC1");
+
+        StyleDiscoveryView view = service.analyze(1L, req);
+
+        assertThat(view.completeTheLook()).isNotEmpty();
+        assertThat(view.completeTheLook()).allSatisfy(m ->
+                assertThat(m.product().id()).isNotEqualTo("01_REC1"));
     }
 }

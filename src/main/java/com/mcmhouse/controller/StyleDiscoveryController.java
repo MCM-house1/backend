@@ -28,10 +28,10 @@ public class StyleDiscoveryController {
     }
 
     @Operation(summary = "셀카 무드 분석",
-            description = "거울 셀카(photo: data URL)와 house를 받아 스타일 제목/키워드/인상 + COMPLETE THE LOOK을 생성하고 "
-                    + "셀카를 저장한다. selectedProductId는 선택 — 보내지 않으면 AI가 셀카에서 해당 House 상품 중 "
-                    + "어떤 것인지 찾아내 yourPick으로 돌려주며, 이 경우 productDetected=true다. "
-                    + "이미지가 없거나 비전 실패 시 House 기반으로 폴백(fallback=true).")
+            description = "거울 셀카(photo: data URL)와 house만 받는다. 상품은 보내지 않는다 — "
+                    + "AI가 셀카에서 해당 House 상품 중 어떤 것인지 직접 찾아내 yourPick으로 돌려준다. "
+                    + "특정에 실패하면 yourPick은 null이다. 스타일 제목/키워드/인상 + COMPLETE THE LOOK을 "
+                    + "생성하고 셀카를 저장한다. 이미지가 없거나 비전 실패 시 House 기반으로 폴백(fallback=true).")
     @PostMapping("/results/{id}/style-discovery")
     public StyleDiscoveryView analyze(@PathVariable Long id, @RequestBody StyleDiscoveryRequest req) {
         return service.analyze(id, req);

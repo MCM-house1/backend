@@ -13,8 +13,28 @@
   ],
   "tags": [
     {
+      "name": "Style Discovery",
+      "description": "셀카 무드 분석 · 패스포트 아카이브"
+    },
+    {
+      "name": "Seller Inquiry",
+      "description": "셀러 상담 요청 내역"
+    },
+    {
+      "name": "Products",
+      "description": "상품 조회 및 House별 추천"
+    },
+    {
       "name": "MCM HOUSE",
       "description": "아이덴티티 테스트 · Zone 탐험 · Stamp/Passport"
+    },
+    {
+      "name": "Passport Dashboard",
+      "description": "패스포트 대시보드 통합 조회"
+    },
+    {
+      "name": "Saved",
+      "description": "상품 저장(하트)"
     }
   ],
   "paths": {
@@ -87,6 +107,280 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/PassportView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results/{id}/style-discovery": {
+      "post": {
+        "tags": [
+          "Style Discovery"
+        ],
+        "summary": "셀카 무드 분석",
+        "description": "거울 셀카(photo: data URL)와 house를 받아 스타일 제목/키워드/인상 + COMPLETE THE LOOK을 생성하고 셀카를 저장한다. selectedProductId는 선택. 이미지가 없거나 비전 실패 시 제품+House 기반으로 폴백(fallback=true).",
+        "operationId": "analyze",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StyleDiscoveryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/StyleDiscoveryView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results/{id}/seller-inquiries": {
+      "get": {
+        "tags": [
+          "Seller Inquiry"
+        ],
+        "summary": "상담 요청 내역 조회 (최근순)",
+        "operationId": "list",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InquiryResult"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Seller Inquiry"
+        ],
+        "summary": "상담 요청 접수",
+        "description": "어떤 상품에 상담을 요청했는지 기록하고 완료 응답을 돌려준다. 실제 상담 연결은 없다.",
+        "operationId": "request",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InquiryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/InquiryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results/{id}/saved": {
+      "get": {
+        "tags": [
+          "Saved"
+        ],
+        "summary": "저장한 상품 목록 (최근순)",
+        "operationId": "list_1",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Product"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Saved"
+        ],
+        "summary": "상품 저장",
+        "description": "이미 저장돼 있으면 그대로 둔다(멱등). 갱신된 저장 목록을 반환.",
+        "operationId": "save",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Product"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results/{id}/ai/style-choice": {
+      "get": {
+        "tags": [
+          "MCM HOUSE"
+        ],
+        "summary": "[AI] A/B 스타일 이미지 후보 조회",
+        "description": "6문항 점수 1·2등 House를 A/B 후보로 반환. 각 후보의 image는 House 대표 이미지 경로(현재 placeholder).",
+        "operationId": "styleChoiceOptions",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "진단 결과 ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/StyleChoiceOptionsView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "MCM HOUSE"
+        ],
+        "summary": "[AI] A/B 스타일 이미지 선택 제출",
+        "description": "chosenHouse = A/B 후보 중 고른 House. reason은 선택(고른 이유 한 줄) — 생략하면 LLM 호출 없이 선택한 House를 그대로 최종으로 채택한다. reason이 있으면 LLM이 선택+이유를 종합 판별하며, 실패 시 선택한 House로 폴백(ai.fallback=true).",
+        "operationId": "styleChoice",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "진단 결과 ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StyleChoiceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultView"
                 }
               }
             }
@@ -206,6 +500,80 @@
         }
       }
     },
+    "/api/results/{id}/recommendations": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "진단 결과 기반 추천 상품",
+        "description": "진단으로 판별된 최종 House(AI 판별 우선)의 상품을 추천으로 내려준다.",
+        "operationId": "recommendations",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecommendationView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results/{id}/products/{productId}": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "상품 상세 (추천 이유 + COMPLETE THE LOOK)",
+        "description": "진단 결과의 House를 근거로 이 상품의 추천 이유와 함께 매치할 상품을 AI가 생성. LLM 실패 시 기본 문구 + 같은 House 상품으로 폴백하며 fallback=true로 표시.",
+        "operationId": "productDetail",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDetailView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/results/{id}/passport": {
       "get": {
         "tags": [
@@ -233,6 +601,75 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/PassportView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results/{id}/passport-dashboard": {
+      "get": {
+        "tags": [
+          "Passport Dashboard"
+        ],
+        "summary": "패스포트 대시보드 통합 조회",
+        "description": "멤버십 카드, AI 아이덴티티, 스탬프 현황, 추천 상품을 한 번에 반환한다.",
+        "operationId": "dashboard",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results/{id}/discoveries": {
+      "get": {
+        "tags": [
+          "Style Discovery"
+        ],
+        "summary": "패스포트 디스커버리 아카이브",
+        "description": "저장된 셀카+스타일 목록(최근순). 각 항목의 photoDataUrl은 그대로 <img>에 사용 가능.",
+        "operationId": "archive",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DiscoveryArchiveItem"
+                  }
                 }
               }
             }
@@ -291,6 +728,109 @@
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/QuestionView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/products": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "전체 상품 조회",
+        "operationId": "products",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Product"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/products/{house}": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "House별 상품 조회",
+        "description": "house 경로변수는 LEGACY / INSTINCT / FREEDOM / CURIOSITY 중 하나.",
+        "operationId": "productsByHouse",
+        "parameters": [
+          {
+            "name": "house",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Product"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results/{id}/saved/{productId}": {
+      "delete": {
+        "tags": [
+          "Saved"
+        ],
+        "summary": "저장 취소",
+        "description": "저장돼 있지 않아도 에러 없이 통과. 갱신된 저장 목록을 반환.",
+        "operationId": "unsave",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Product"
                   }
                 }
               }
@@ -493,6 +1033,166 @@
           }
         }
       },
+      "StyleDiscoveryRequest": {
+        "type": "object",
+        "properties": {
+          "photo": {
+            "type": "string"
+          },
+          "house": {
+            "type": "string"
+          },
+          "selectedProductId": {
+            "type": "string"
+          }
+        }
+      },
+      "MatchItem": {
+        "type": "object",
+        "properties": {
+          "product": {
+            "$ref": "#/components/schemas/Product"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "house": {
+            "type": "string",
+            "enum": [
+              "LEGACY",
+              "INSTINCT",
+              "FREEDOM",
+              "CURIOSITY"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "price": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "category": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string"
+          }
+        }
+      },
+      "StyleDiscoveryView": {
+        "type": "object",
+        "properties": {
+          "discoveryId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "house": {
+            "type": "string"
+          },
+          "styleTitle": {
+            "type": "string"
+          },
+          "styleDescription": {
+            "type": "string"
+          },
+          "styleKeywords": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "impression": {
+            "type": "string"
+          },
+          "yourPick": {
+            "$ref": "#/components/schemas/Product"
+          },
+          "completeTheLook": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MatchItem"
+            }
+          },
+          "fallback": {
+            "type": "boolean"
+          }
+        }
+      },
+      "InquiryRequest": {
+        "required": [
+          "productId"
+        ],
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string"
+          }
+        }
+      },
+      "InquiryResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "inquiry": {
+            "$ref": "#/components/schemas/InquiryResult"
+          }
+        }
+      },
+      "InquiryResult": {
+        "type": "object",
+        "properties": {
+          "inquiryId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "product": {
+            "$ref": "#/components/schemas/Product"
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SaveRequest": {
+        "required": [
+          "productId"
+        ],
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string"
+          }
+        }
+      },
+      "StyleChoiceRequest": {
+        "required": [
+          "chosenHouse"
+        ],
+        "type": "object",
+        "properties": {
+          "chosenHouse": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
       "AiQuestionsView": {
         "type": "object",
         "properties": {
@@ -527,6 +1227,197 @@
           }
         }
       },
+      "RecommendationView": {
+        "type": "object",
+        "properties": {
+          "resultId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "house": {
+            "type": "string"
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Product"
+            }
+          }
+        }
+      },
+      "ProductDetailView": {
+        "type": "object",
+        "properties": {
+          "house": {
+            "type": "string"
+          },
+          "product": {
+            "$ref": "#/components/schemas/Product"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "story": {
+            "type": "string"
+          },
+          "fallback": {
+            "type": "boolean"
+          },
+          "completeTheLook": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MatchItem"
+            }
+          }
+        }
+      },
+      "DashboardView": {
+        "type": "object",
+        "properties": {
+          "resultId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "membership": {
+            "$ref": "#/components/schemas/Membership"
+          },
+          "identity": {
+            "$ref": "#/components/schemas/Identity"
+          },
+          "passport": {
+            "$ref": "#/components/schemas/Passport"
+          },
+          "recommendations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Product"
+            }
+          }
+        }
+      },
+      "Identity": {
+        "type": "object",
+        "properties": {
+          "analyzed": {
+            "type": "boolean"
+          },
+          "fallback": {
+            "type": "boolean"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "Membership": {
+        "type": "object",
+        "properties": {
+          "house": {
+            "type": "string"
+          },
+          "houseTitle": {
+            "type": "string"
+          },
+          "issueNumber": {
+            "type": "string"
+          },
+          "personaColor": {
+            "type": "string"
+          },
+          "level": {
+            "type": "string"
+          },
+          "styleTags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Passport": {
+        "type": "object",
+        "properties": {
+          "visitedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completed": {
+            "type": "boolean"
+          },
+          "currentZone": {
+            "type": "string"
+          },
+          "nextRecommended": {
+            "type": "string"
+          },
+          "zones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ZoneStatus"
+            }
+          }
+        }
+      },
+      "ZoneStatus": {
+        "type": "object",
+        "properties": {
+          "house": {
+            "type": "string"
+          },
+          "zoneName": {
+            "type": "string"
+          },
+          "zoneMission": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "order": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "visited": {
+            "type": "boolean"
+          }
+        }
+      },
+      "DiscoveryArchiveItem": {
+        "type": "object",
+        "properties": {
+          "discoveryId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "house": {
+            "type": "string"
+          },
+          "photoDataUrl": {
+            "type": "string"
+          },
+          "styleTitle": {
+            "type": "string"
+          },
+          "styleKeywords": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "CurrentZoneView": {
         "type": "object",
         "properties": {
@@ -551,6 +1442,35 @@
           },
           "nextRecommended": {
             "type": "string"
+          }
+        }
+      },
+      "StyleChoiceOption": {
+        "type": "object",
+        "properties": {
+          "house": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string"
+          }
+        }
+      },
+      "StyleChoiceOptionsView": {
+        "type": "object",
+        "properties": {
+          "resultId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "optionA": {
+            "$ref": "#/components/schemas/StyleChoiceOption"
+          },
+          "optionB": {
+            "$ref": "#/components/schemas/StyleChoiceOption"
           }
         }
       },

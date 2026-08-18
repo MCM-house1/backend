@@ -15,7 +15,7 @@ public enum House {
             "LEGACY ZONE", "HERITAGE 탐험", "#8a6d3b",
             List.of("MCM-LEG-001", "MCM-LEG-002", "MCM-LEG-003"),
             "시간이 쌓아온 가치",
-            "/images/house/legacy.jpg"
+            "/images/mcm-house-legacy.png"
     ),
     INSTINCT(
             "INSTINCT HOUSE",
@@ -24,7 +24,7 @@ public enum House {
             "INSTINCT ZONE", "BOLD 탐험", "#b0413e",
             List.of("MCM-INS-001", "MCM-INS-002", "MCM-INS-003"),
             "자신의 감각을 믿는 대담함",
-            "/images/house/instinct.jpg"
+            "/images/mcm-house-instinct.png"
     ),
     FREEDOM(
             "FREEDOM HOUSE",
@@ -33,7 +33,7 @@ public enum House {
             "FREEDOM ZONE", "MOBILITY 탐험", "#3f6f6a",
             List.of("MCM-FRE-001", "MCM-FRE-002", "MCM-FRE-003"),
             "얽매이지 않는 자유로움",
-            "/images/house/freedom.jpg"
+            "/images/mcm-house-freedom.png"
     ),
     CURIOSITY(
             "CURIOSITY HOUSE",
@@ -42,7 +42,7 @@ public enum House {
             "CURIOSITY ZONE", "DISCOVERY 탐험", "#5a4b8a",
             List.of("MCM-CUR-001", "MCM-CUR-002", "MCM-CUR-003"),
             "새로운 것을 향한 호기심",
-            "/images/house/curiosity.jpg"
+            "/images/mcm-house-curiosity.png"
     );
 
     private final String title;

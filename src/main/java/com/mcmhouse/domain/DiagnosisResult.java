@@ -149,6 +149,15 @@ public class DiagnosisResult {
         return visits.stream().anyMatch(v -> v.getHouse() == house);
     }
 
+    /** 해당 House를 방문(QR 스캔)한 시각. 미방문이면 null. */
+    public LocalDateTime visitedAt(House house) {
+        return visits.stream()
+                .filter(v -> v.getHouse() == house)
+                .map(ZoneVisit::getVisitedAt)
+                .findFirst()
+                .orElse(null);
+    }
+
     public void addVisit(ZoneVisit visit) {
         visit.setResult(this);
         visits.add(visit);

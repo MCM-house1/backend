@@ -213,7 +213,7 @@ public class DiagnosisService {
             else if (next == null) next = h;
             zones.add(new ZoneStatusView(
                     h.name(), h.getZoneName(), h.getZoneMission(),
-                    h.getColor(), order++, visited));
+                    h.getColor(), order++, visited, result.visitedAt(h)));
         }
 
         int total = House.values().length;

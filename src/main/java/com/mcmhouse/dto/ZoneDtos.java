@@ -2,6 +2,7 @@ package com.mcmhouse.dto;
 
 import jakarta.validation.constraints.NotNull;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /** Zone 방문 인증·패스포트·현재 위치 관련 DTO. */
@@ -16,7 +17,8 @@ public final class ZoneDtos {
 
     public record ZoneStatusView(
             String house, String zoneName, String zoneMission,
-            String color, int order, boolean visited
+            String color, int order, boolean visited,
+            LocalDateTime visitedAt   // QR 스캔(방문 인증) 시각. 미방문이면 null
     ) {}
 
     public record PassportView(

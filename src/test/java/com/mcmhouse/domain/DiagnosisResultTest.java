@@ -76,4 +76,16 @@ class DiagnosisResultTest {
         assertThat(result.hasVisited(House.FREEDOM)).isTrue();
         assertThat(result.getCurrentZone()).isEqualTo(House.FREEDOM);
     }
+
+    @Test
+    void 방문한_House의_visitedAt은_기록되고_미방문은_null이다() {
+        var result = of(House.LEGACY, House.LEGACY, House.LEGACY,
+                House.LEGACY, House.LEGACY, House.LEGACY);
+
+        assertThat(result.visitedAt(House.FREEDOM)).isNull();
+        result.addVisit(new ZoneVisit(House.FREEDOM));
+
+        assertThat(result.visitedAt(House.FREEDOM)).isNotNull();
+        assertThat(result.visitedAt(House.CURIOSITY)).isNull();
+    }
 }

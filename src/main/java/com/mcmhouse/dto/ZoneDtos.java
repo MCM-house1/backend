@@ -18,7 +18,8 @@ public final class ZoneDtos {
     public record ZoneStatusView(
             String house, String zoneName, String zoneMission,
             String color, int order, boolean visited,
-            LocalDateTime visitedAt   // QR 스캔(방문 인증) 시각. 미방문이면 null
+            LocalDateTime visitedAt,  // QR 스캔(방문 인증) 시각. 미방문이면 null
+            Long discoveryId          // 이 House의 디스커버리 아카이브 항목 id. 셀카 무드 분석 전이면 null
     ) {}
 
     public record PassportView(

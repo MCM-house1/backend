@@ -6,6 +6,7 @@ import com.mcmhouse.dto.AiDtos.*;
 import com.mcmhouse.dto.QuestionDtos.*;
 import com.mcmhouse.dto.ResultDtos.*;
 import com.mcmhouse.dto.ZoneDtos.*;
+import com.mcmhouse.repository.StyleDiscoveryRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -22,13 +23,16 @@ public class DiagnosisService {
     private final QuestionCatalog catalog;
     private final com.mcmhouse.repository.DiagnosisResultRepository repository;
     private final AiAnalysisService aiAnalysisService;
+    private final StyleDiscoveryRepository discoveryRepository;
 
     public DiagnosisService(QuestionCatalog catalog,
                             com.mcmhouse.repository.DiagnosisResultRepository repository,
-                            AiAnalysisService aiAnalysisService) {
+                            AiAnalysisService aiAnalysisService,
+                            StyleDiscoveryRepository discoveryRepository) {
         this.catalog = catalog;
         this.repository = repository;
         this.aiAnalysisService = aiAnalysisService;
+        this.discoveryRepository = discoveryRepository;
     }
 
     public List<QuestionView> getQuestions() {
@@ -211,9 +215,12 @@ public class DiagnosisService {
             boolean visited = result.hasVisited(h);
             if (visited) visitedCount++;
             else if (next == null) next = h;
+            Long discoveryId = discoveryRepository.findByResultIdAndHouse(result.getId(), h)
+                    .map(com.mcmhouse.domain.StyleDiscovery::getId)
+                    .orElse(null);
             zones.add(new ZoneStatusView(
                     h.name(), h.getZoneName(), h.getZoneMission(),
-                    h.getColor(), order++, visited, result.visitedAt(h)));
+                    h.getColor(), order++, visited, result.visitedAt(h), discoveryId));
         }
 
         int total = House.values().length;

@@ -6,7 +6,7 @@
     "price": 770000,
     "category": "SHOES",
     "image": "/images/legacy/01_REC.PNG",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "01_REC2",
@@ -15,7 +15,7 @@
     "price": 630000,
     "category": "SHOES",
     "image": "/images/legacy/01_REC2.PNG",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "01_REC3",
@@ -24,7 +24,7 @@
     "price": 990000,
     "category": "BAG",
     "image": "/images/legacy/01_REC3.PNG",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "01_REC4",
@@ -33,7 +33,7 @@
     "price": 490000,
     "category": "WALLET",
     "image": "/images/legacy/01_REC4.PNG",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "01_REC5",
@@ -42,7 +42,7 @@
     "price": 390000,
     "category": "APPAREL",
     "image": "/images/legacy/01_REC5.PNG",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "01_REC6",
@@ -51,7 +51,7 @@
     "price": 290000,
     "category": "ACCESSORY",
     "image": "/images/legacy/01_REC6.PNG",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "01_REC7",
@@ -60,7 +60,7 @@
     "price": 430000,
     "category": "ACCESSORY",
     "image": "/images/legacy/01_REC7.PNG",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "02_REC1",
@@ -69,7 +69,7 @@
     "price": 490000,
     "category": "ACCESSORY",
     "image": "/images/instinct/02_REC.avif",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "02_REC2",
@@ -78,7 +78,7 @@
     "price": 790000,
     "category": "BAG",
     "image": "/images/instinct/02_REC2.avif",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "02_REC3",
@@ -87,7 +87,7 @@
     "price": 350000,
     "category": "ACCESSORY",
     "image": "/images/instinct/02_REC3.avif",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "02_REC4",
@@ -96,7 +96,7 @@
     "price": 1620000,
     "category": "BAG",
     "image": "/images/instinct/02_REC4.avif",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "02_REC5",
@@ -105,7 +105,7 @@
     "price": 1250000,
     "category": "APPAREL",
     "image": "/images/instinct/02_REC5.avif",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "02_REC6",
@@ -114,7 +114,7 @@
     "price": 290000,
     "category": "ACCESSORY",
     "image": "/images/instinct/02_REC6.avif",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "03_REC1",
@@ -123,7 +123,7 @@
     "price": 1150000,
     "category": "BAG",
     "image": "/images/freedom/03_REC.avif",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "03_REC2",
@@ -132,7 +132,7 @@
     "price": 270000,
     "category": "ACCESSORY",
     "image": "/images/freedom/03_REC2.avif",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "03_REC3",
@@ -141,7 +141,7 @@
     "price": 990000,
     "category": "TRAVEL",
     "image": "/images/freedom/03_REC3.PNG",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "03_REC4",
@@ -150,7 +150,7 @@
     "price": 490000,
     "category": "WALLET",
     "image": "/images/freedom/03_REC4.PNG",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "03_REC5",
@@ -159,7 +159,7 @@
     "price": 730000,
     "category": "APPAREL",
     "image": "/images/freedom/03_REC5.avif",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "03_REC6",
@@ -168,7 +168,7 @@
     "price": 370000,
     "category": "ACCESSORY",
     "image": "/images/freedom/03_REC6.avif",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "03_REC7",
@@ -177,7 +177,7 @@
     "price": 390000,
     "category": "ACCESSORY",
     "image": "/images/freedom/03_REC7.avif",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "04_REC1",
@@ -186,7 +186,7 @@
     "price": 1290000,
     "category": "BAG",
     "image": "/images/curiosity/04_REC.avif",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "04_REC2",
@@ -195,7 +195,7 @@
     "price": 1190000,
     "category": "BAG",
     "image": "/images/curiosity/04_REC2.avif",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "04_REC3",
@@ -204,7 +204,7 @@
     "price": 1690000,
     "category": "BAG",
     "image": "/images/curiosity/04_REC3.avif",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "04_REC4",
@@ -213,7 +213,7 @@
     "price": 1050000,
     "category": "APPAREL",
     "image": "/images/curiosity/04_REC4.avif",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "04_REC5",
@@ -222,7 +222,7 @@
     "price": 950000,
     "category": "SHOES",
     "image": "/images/curiosity/04_REC5.avif",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "04_REC6",
@@ -231,7 +231,7 @@
     "price": 710000,
     "category": "ACCESSORY",
     "image": "/images/curiosity/04_REC6.avif",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   },
   {
     "id": "04_REC7",
@@ -240,6 +240,6 @@
     "price": 890000,
     "category": "SHOES",
     "image": "/images/curiosity/04_REC7.avif",
-    "productUrl": null
+    "productUrl": "https://kr.mcmworldwide.com/ko_KR/home"
   }
 ]

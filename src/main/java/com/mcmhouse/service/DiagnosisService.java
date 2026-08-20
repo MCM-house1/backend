@@ -179,6 +179,7 @@ public class DiagnosisService {
             throw new ResponseStatusException(BAD_REQUEST, e.getMessage());
         }
 
+        result.applyStyleChoice(chosen);   // 최종 점수에 가산점을 얹으려면 무엇을 골랐는지 남겨야 한다
         result.applyAiAnalysis(List.of(), analysis.house(), analysis.summary(), analysis.reason(), analysis.fallback());
         repository.save(result);
         return ResultView.from(result);

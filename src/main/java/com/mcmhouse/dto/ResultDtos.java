@@ -55,7 +55,8 @@ public final class ResultDtos {
 
     public record ResultView(
             Long resultId,
-            Map<String, Integer> scores,
+            Map<String, Integer> scores,      // 6문항 원점수 (선택지당 2점)
+            Map<String, Integer> finalScores, // 원점수 + A/B 선택 가산점. 화면 막대는 이 값으로 그린다
             List<String> finalHouses,   // 1개=단일, 2개+=복합형
             boolean combo,
             String comboTitle,          // 예: "LEGACY × CURIOSITY" (단일이면 House title)
@@ -65,9 +66,6 @@ public final class ResultDtos {
             AiAnalysisView ai
     ) {
         public static ResultView from(DiagnosisResult r) {
-            Map<String, Integer> scores = r.scoreMap().entrySet().stream()
-                    .collect(java.util.stream.Collectors.toMap(e -> e.getKey().name(),
-                            Map.Entry::getValue, (a, b) -> a, java.util.LinkedHashMap::new));
             List<House> finalHouses = r.getFinalHouses();
             List<String> finals = finalHouses.stream().map(Enum::name).toList();
             List<String> route = r.recommendedRoute().stream().map(Enum::name).toList();
@@ -76,12 +74,20 @@ public final class ResultDtos {
             House primary = r.effectiveHouse();
 
             return new ResultView(
-                    r.getId(), scores, finals, finals.size() >= 2,
+                    r.getId(), named(r.scoreMap()), named(r.finalScoreMap()),
+                    finals, finals.size() >= 2,
                     House.comboTitle(finalHouses),
                     House.comboDescription(finalHouses),
                     HouseView.of(primary), route,
                     AiAnalysisView.from(r)
             );
+        }
+
+        /** House 키를 이름 문자열로 바꾼다. 선언 순서를 유지해야 화면의 막대 순서가 흔들리지 않는다. */
+        private static Map<String, Integer> named(Map<House, Integer> scores) {
+            return scores.entrySet().stream()
+                    .collect(java.util.stream.Collectors.toMap(e -> e.getKey().name(),
+                            Map.Entry::getValue, (a, b) -> a, java.util.LinkedHashMap::new));
         }
     }
 }

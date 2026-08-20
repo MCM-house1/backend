@@ -61,6 +61,12 @@ public class StyleDiscovery {
     @Column(name = "fallback", nullable = false)
     private boolean fallback;
 
+    /** COMPLETE THE LOOK 매치 상품(id)과 매치 이유. 재조회 시 그대로 다시 내려주기 위해 저장한다. */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "style_discovery_match", joinColumns = @JoinColumn(name = "discovery_id"))
+    @OrderColumn(name = "seq")
+    private List<MatchRecord> matches = new ArrayList<>();
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -74,13 +80,33 @@ public class StyleDiscovery {
     }
 
     /** 분석 결과를 채운다. 재분석 시 덮어쓴다. */
-    public void applyAnalysis(String styleTitle, String styleDescription,
-                              List<String> keywords, String impression, boolean fallback) {
+    public void applyAnalysis(String styleTitle, String styleDescription, List<String> keywords,
+                              String impression, boolean fallback, List<MatchRecord> matches) {
         this.styleTitle = styleTitle;
         this.styleDescription = styleDescription;
         this.keywords = new ArrayList<>(keywords);
         this.impression = impression;
         this.fallback = fallback;
+        this.matches = new ArrayList<>(matches);
+    }
+
+    /** COMPLETE THE LOOK 매치 상품 id + 매치 이유 1건. */
+    @Embeddable
+    public static class MatchRecord {
+        @Column(name = "product_id")
+        private String productId;
+        @Column(name = "reason", length = 500)
+        private String reason;
+
+        protected MatchRecord() {}
+
+        public MatchRecord(String productId, String reason) {
+            this.productId = productId;
+            this.reason = reason;
+        }
+
+        public String getProductId() { return productId; }
+        public String getReason() { return reason; }
     }
 
     public void updatePhoto(String photoDataUrl, String detectedProductId) {
@@ -99,5 +125,6 @@ public class StyleDiscovery {
     public List<String> getKeywords() { return keywords; }
     public String getImpression() { return impression; }
     public boolean isFallback() { return fallback; }
+    public List<MatchRecord> getMatches() { return matches; }
     public LocalDateTime getCreatedAt() { return createdAt; }
 }

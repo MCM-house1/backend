@@ -47,9 +47,10 @@ public class StyleDiscoveryController {
     @Operation(summary = "House별 디스커버리 단건 조회",
             description = "패스포트 화면에서 House Zone 카드를 눌렀을 때 이어지는 상세용. "
                     + "GET /results/{id}/passport 응답의 zones[].discoveryId가 null이 아닌 House만 조회 가능하며, "
-                    + "아직 그 House에서 셀카 무드 분석을 하지 않았으면 404를 반환한다.")
+                    + "아직 그 House에서 셀카 무드 분석을 하지 않았으면 404를 반환한다. "
+                    + "POST /results/{id}/style-discovery 직후 응답(StyleDiscoveryView)과 동일한 상세 형태다.")
     @GetMapping("/results/{id}/discoveries/{house}")
-    public DiscoveryArchiveItem findByHouse(@PathVariable Long id, @PathVariable String house) {
+    public StyleDiscoveryView findByHouse(@PathVariable Long id, @PathVariable String house) {
         return service.findByHouse(id, house);
     }
 }

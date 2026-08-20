@@ -94,8 +94,11 @@ public class StyleDiscoveryService {
         StyleDiscovery entity = discoveryRepository.findByResultIdAndHouse(resultId, house)
                 .orElseGet(() -> new StyleDiscovery(resultId, house, nullToEmpty(req.photo()), pickId));
         entity.updatePhoto(nullToEmpty(req.photo()), pickId);
+        List<StyleDiscovery.MatchRecord> matchRecords = analysis.matches.stream()
+                .map(m -> new StyleDiscovery.MatchRecord(m.product().id(), m.reason()))
+                .toList();
         entity.applyAnalysis(analysis.title, analysis.description, analysis.keywords,
-                analysis.impression, analysis.fallback);
+                analysis.impression, analysis.fallback, matchRecords);
         StyleDiscovery saved = discoveryRepository.save(entity);
 
         return new StyleDiscoveryView(
@@ -117,19 +120,28 @@ public class StyleDiscoveryService {
     }
 
     /**
-     * 패스포트에서 House 카드를 눌렀을 때 이어지는 화면용: 해당 House의 디스커버리 1건.
+     * 패스포트에서 House 카드를 눌렀을 때 이어지는 화면용: 해당 House의 디스커버리 1건을
+     * analyze() 직후 응답(StyleDiscoveryView)과 동일한 상세 형태로 돌려준다.
      * 아직 그 House에서 셀카 무드 분석을 하지 않았으면 404.
      */
     @Transactional(readOnly = true)
-    public DiscoveryArchiveItem findByHouse(Long resultId, String rawHouse) {
+    public StyleDiscoveryView findByHouse(Long resultId, String rawHouse) {
         if (!resultRepository.existsById(resultId)) {
             throw new ResponseStatusException(NOT_FOUND, "진단 결과를 찾을 수 없습니다: " + resultId);
         }
         House house = parseHouse(rawHouse);
-        return discoveryRepository.findByResultIdAndHouse(resultId, house)
-                .map(this::toArchiveItem)
+        StyleDiscovery d = discoveryRepository.findByResultIdAndHouse(resultId, house)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND,
                         "%s House의 디스커버리 기록이 아직 없습니다.".formatted(house.name())));
+
+        Product pick = d.getDetectedProductId() == null ? null : products.findById(d.getDetectedProductId());
+        List<MatchItem> completeTheLook = d.getMatches().stream()
+                .map(m -> new MatchItem(products.findById(m.getProductId()), m.getReason()))
+                .filter(m -> m.product() != null)
+                .toList();
+        return new StyleDiscoveryView(
+                d.getId(), house.name(), d.getStyleTitle(), d.getStyleDescription(),
+                d.getKeywords(), d.getImpression(), pick, completeTheLook, d.isFallback());
     }
 
     private DiscoveryArchiveItem toArchiveItem(StyleDiscovery d) {

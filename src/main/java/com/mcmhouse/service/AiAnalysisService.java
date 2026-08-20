@@ -286,11 +286,14 @@ public class AiAnalysisService {
     /* ==================== A/B 이미지 선택 (신규) ==================== */
 
     /**
-     * 6문항 점수 1·2등 House를 반환한다. 동점이면 {@link House#recommendedRoute} 순서(enum 선언 순서)로 결정한다.
+     * 6문항 점수 1·2등 House를 반환한다. 동점이면 enum 선언 순서로 결정한다.
      * House가 4개뿐이라 2등은 항상 존재한다.
+     *
+     * <p>선택 가산점이 빠진 {@link DiagnosisResult#scoreRoute()}를 쓴다. 가산점이 섞이면
+     * 이미 고른 House가 1등으로 올라와, 다시 조회했을 때 후보가 달라진다.
      */
     public List<House> topTwoHouses(DiagnosisResult result) {
-        return result.recommendedRoute().subList(0, 2);
+        return result.scoreRoute().subList(0, 2);
     }
 
     /**

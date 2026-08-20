@@ -174,7 +174,18 @@ public class DiagnosisResult {
      * (Legacy 6 / Curiosity 4 / Freedom 2 / Instinct 0 → LEGACY → CURIOSITY → FREEDOM → INSTINCT)
      */
     public List<House> recommendedRoute() {
-        Map<House, Integer> map = scoreMap();
+        return routeOf(finalScoreMap());
+    }
+
+    /**
+     * 6문항 점수만으로 정렬한 순서. A/B 후보(1·2등)를 뽑을 때 쓴다.
+     * 선택 가산점이 섞이면 이미 고른 House가 계속 1등으로 올라와 후보가 흔들리므로 분리한다.
+     */
+    public List<House> scoreRoute() {
+        return routeOf(scoreMap());
+    }
+
+    private List<House> routeOf(Map<House, Integer> map) {
         List<House> route = new ArrayList<>(List.of(House.values()));
         route.sort((a, b) -> {
             int cmp = Integer.compare(map.get(b), map.get(a));

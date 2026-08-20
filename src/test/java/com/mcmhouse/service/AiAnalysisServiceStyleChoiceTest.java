@@ -108,4 +108,28 @@ class AiAnalysisServiceStyleChoiceTest {
                 .containsEntry(House.LEGACY, 6);
         assertThat(result.scoreMap()).containsEntry(House.CURIOSITY, 4);        // 원점수는 그대로
     }
+
+    @Test
+    void 선택_가산점이_Zone_추천_순서에도_반영된다() {
+        // LEGACY 6 / CURIOSITY 4 → 원래 순서는 LEGACY 먼저
+        var result = resultWith(House.LEGACY, House.LEGACY, House.LEGACY,
+                House.CURIOSITY, House.CURIOSITY, House.FREEDOM);
+        assertThat(result.recommendedRoute().get(0)).isEqualTo(House.LEGACY);
+
+        result.applyStyleChoice(House.CURIOSITY);   // 4+3=7 > 6
+
+        assertThat(result.recommendedRoute().get(0)).isEqualTo(House.CURIOSITY);
+    }
+
+    @Test
+    void A_B_후보는_선택_후에도_바뀌지_않는다() {
+        // 가산점이 후보 산정에 섞이면 이미 고른 House가 계속 1등으로 올라온다
+        var result = resultWith(House.LEGACY, House.LEGACY, House.LEGACY,
+                House.CURIOSITY, House.CURIOSITY, House.FREEDOM);
+        var before = service.topTwoHouses(result);
+
+        result.applyStyleChoice(House.CURIOSITY);
+
+        assertThat(service.topTwoHouses(result)).isEqualTo(before);
+    }
 }

@@ -112,10 +112,30 @@ public class StyleDiscoveryService {
             throw new ResponseStatusException(NOT_FOUND, "진단 결과를 찾을 수 없습니다: " + resultId);
         }
         return discoveryRepository.findByResultIdOrderByCreatedAtDesc(resultId).stream()
-                .map(d -> new DiscoveryArchiveItem(
-                        d.getId(), d.getHouse().name(), d.getPhotoDataUrl(),
-                        d.getStyleTitle(), d.getKeywords(), d.getCreatedAt()))
+                .map(this::toArchiveItem)
                 .toList();
+    }
+
+    /**
+     * 패스포트에서 House 카드를 눌렀을 때 이어지는 화면용: 해당 House의 디스커버리 1건.
+     * 아직 그 House에서 셀카 무드 분석을 하지 않았으면 404.
+     */
+    @Transactional(readOnly = true)
+    public DiscoveryArchiveItem findByHouse(Long resultId, String rawHouse) {
+        if (!resultRepository.existsById(resultId)) {
+            throw new ResponseStatusException(NOT_FOUND, "진단 결과를 찾을 수 없습니다: " + resultId);
+        }
+        House house = parseHouse(rawHouse);
+        return discoveryRepository.findByResultIdAndHouse(resultId, house)
+                .map(this::toArchiveItem)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND,
+                        "%s House의 디스커버리 기록이 아직 없습니다.".formatted(house.name())));
+    }
+
+    private DiscoveryArchiveItem toArchiveItem(StyleDiscovery d) {
+        return new DiscoveryArchiveItem(
+                d.getId(), d.getHouse().name(), d.getPhotoDataUrl(),
+                d.getStyleTitle(), d.getKeywords(), d.getCreatedAt());
     }
 
     /* ---------- 내부: 분석 ---------- */

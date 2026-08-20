@@ -55,8 +55,7 @@ public final class ResultDtos {
 
     public record ResultView(
             Long resultId,
-            Map<String, Integer> scores,      // 6문항 원점수 (선택지당 2점)
-            Map<String, Integer> finalScores, // 원점수 + A/B 선택 가산점. 화면 막대는 이 값으로 그린다
+            Map<String, Integer> scores,  // 6문항 점수 + A/B 선택 가산점. 최종 House를 정한 그 점수다
             List<String> finalHouses,   // 1개=단일, 2개+=복합형
             boolean combo,
             String comboTitle,          // 예: "LEGACY × CURIOSITY" (단일이면 House title)
@@ -73,8 +72,9 @@ public final class ResultDtos {
             // AI 판별이 있으면 그것을 대표 House로, 없으면 규칙기반 최고점 House를 쓴다.
             House primary = r.effectiveHouse();
 
+            // 막대 그래프가 최종 House와 어긋나 보이지 않도록, 최종 판정에 쓴 점수를 그대로 내려준다.
             return new ResultView(
-                    r.getId(), named(r.scoreMap()), named(r.finalScoreMap()),
+                    r.getId(), named(r.finalScoreMap()),
                     finals, finals.size() >= 2,
                     House.comboTitle(finalHouses),
                     House.comboDescription(finalHouses),

@@ -316,23 +316,14 @@ public class AiAnalysisService {
         int otherTotal = scores.get(other);
         House finalHouse = chosenTotal >= otherTotal ? chosen : other;
 
+        // reason은 화면에 노출되지 않는다(프론트 결과 페이지는 primaryHouse와 scores만 쓴다).
+        // 나중에 "왜 이 House인지" 따져볼 때 근거가 남도록 점수만 간결히 적는다.
         return new Analysis(finalHouse,
                 House.comboDescription(List.of(finalHouse)),
-                choiceReason(chosen, other, finalHouse, scores),
+                "6문항 점수(%s %d점 / %s %d점)와 %s 이미지 선택을 함께 반영했어요."
+                        .formatted(topTwo.get(0).name(), scores.get(topTwo.get(0)),
+                                topTwo.get(1).name(), scores.get(topTwo.get(1)), chosen.name()),
                 false);
-    }
-
-    /** 왜 이 House가 됐는지 방문객에게 그대로 보여줄 문장. */
-    private String choiceReason(House chosen, House other, House finalHouse, Map<House, Integer> scores) {
-        if (finalHouse != chosen) {
-            return "%s의 이미지를 골라주셨지만, 앞선 6문항에서는 %s 성향이 %d점 대 %d점으로 뚜렷했어요. 그래서 %s로 안내드려요."
-                    .formatted(chosen.name(), other.name(), scores.get(other), scores.get(chosen), other.name());
-        }
-        if (scores.get(chosen) >= scores.get(other)) {
-            return "6문항 결과와 이미지 선택이 모두 %s를 가리켰어요.".formatted(chosen.name());
-        }
-        return "6문항에서는 %s가 근소하게 앞섰지만, 마지막 이미지 선택에서 %s에 더 끌린다고 답해주셔서 %s로 안내드려요."
-                .formatted(other.name(), chosen.name(), chosen.name());
     }
 
     /* ==================== 반환 타입 ==================== */

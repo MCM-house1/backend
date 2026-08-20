@@ -213,6 +213,9 @@ public class StyleDiscoveryService {
 
                 # 규칙
                 - matches를 고를 때 기준은 기준 상품과의 스타일 궁합입니다. House가 같은지는 부차적입니다.
+                - matches는 서로 다른 카테고리(BAG/SHOES/WALLET/APPAREL/ACCESSORY/TRAVEL)로 고르고,
+                  기준 상품과도 카테고리가 겹치지 않게 하세요. 예: 기준 상품이 가방이면 신발·지갑·
+                  액세서리 등 다른 종류에서 고를 것 (가방+가방처럼 같은 종류로만 채우지 말 것).
                 - 셀카 속 인물의 외모/신원을 묘사하거나 추측하지 말 것. 스타일·무드만.
                 - 한국어 존댓말, 따뜻하고 감각적인 톤.
                 - matches의 id는 반드시 위 후보 목록의 id를 그대로 쓸 것.
@@ -238,23 +241,40 @@ public class StyleDiscoveryService {
 
     /**
      * 이미지 없음/실패 시 폴백. 매치는 선택 상품과 같은 House를 우선하되 전체 후보에서 채운다.
+     *
+     * <p>같은 카테고리(가방+가방 등)만 뽑히지 않도록, 이미 고른 카테고리(기준 상품 포함)는
+     * 최대한 피해서 다양한 종류로 채운다. 후보가 부족할 때만 카테고리 중복을 허용한다.
      */
     private Analysis fallback(House house, Product pick) {
         House base = pick == null ? house : pick.house();
-        List<Product> pool = products.all().stream()
+        List<Product> sameHouse = products.all().stream()
                 .filter(p -> pick == null || !p.id().equals(pick.id()))
+                .filter(p -> p.house() == base)
+                .toList();
+        List<Product> otherHouse = products.all().stream()
+                .filter(p -> p.house() != base)
                 .toList();
 
-        List<Product> sameHouseFirst = new ArrayList<>();
-        pool.stream().filter(p -> p.house() == base).forEach(sameHouseFirst::add);
-        pool.stream().filter(p -> p.house() != base).forEach(sameHouseFirst::add);
+        java.util.Set<String> usedCategories = new java.util.HashSet<>();
+        if (pick != null) usedCategories.add(pick.category());
 
         List<MatchItem> matches = new ArrayList<>();
-        for (Product p : sameHouseFirst) {
+        // 1차: 같은 House, 카테고리는 겹치지 않게
+        for (Product p : sameHouse) {
             if (matches.size() >= MATCH_COUNT) break;
-            matches.add(new MatchItem(p, p.house() == base
-                    ? "같은 " + base.name() + " 무드의 아이템이라 함께 매치하기 좋아요."
-                    : "스타일 결이 비슷해 함께 매치하기 좋아요."));
+            if (!usedCategories.add(p.category())) continue;
+            matches.add(new MatchItem(p, "같은 " + base.name() + " 무드의 아이템이라 함께 매치하기 좋아요."));
+        }
+        // 2차: 후보가 모자라면 같은 House에서 카테고리 중복 허용
+        for (Product p : sameHouse) {
+            if (matches.size() >= MATCH_COUNT) break;
+            if (matches.stream().anyMatch(m -> m.product().id().equals(p.id()))) continue;
+            matches.add(new MatchItem(p, "같은 " + base.name() + " 무드의 아이템이라 함께 매치하기 좋아요."));
+        }
+        // 3차: 그래도 모자라면 다른 House에서 채움
+        for (Product p : otherHouse) {
+            if (matches.size() >= MATCH_COUNT) break;
+            matches.add(new MatchItem(p, "스타일 결이 비슷해 함께 매치하기 좋아요."));
         }
         return new Analysis(
                 house.getTitle() + " 무드",

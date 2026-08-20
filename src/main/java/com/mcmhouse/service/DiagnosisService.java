@@ -1,6 +1,7 @@
 package com.mcmhouse.service;
 
 import com.mcmhouse.catalog.QuestionCatalog;
+import com.mcmhouse.catalog.ProductCatalog;
 import com.mcmhouse.domain.*;
 import com.mcmhouse.dto.AiDtos.*;
 import com.mcmhouse.dto.QuestionDtos.*;
@@ -24,15 +25,18 @@ public class DiagnosisService {
     private final com.mcmhouse.repository.DiagnosisResultRepository repository;
     private final AiAnalysisService aiAnalysisService;
     private final StyleDiscoveryRepository discoveryRepository;
+    private final ProductCatalog products;
 
     public DiagnosisService(QuestionCatalog catalog,
                             com.mcmhouse.repository.DiagnosisResultRepository repository,
                             AiAnalysisService aiAnalysisService,
-                            StyleDiscoveryRepository discoveryRepository) {
+                            StyleDiscoveryRepository discoveryRepository,
+                            ProductCatalog products) {
         this.catalog = catalog;
         this.repository = repository;
         this.aiAnalysisService = aiAnalysisService;
         this.discoveryRepository = discoveryRepository;
+        this.products = products;
     }
 
     public List<QuestionView> getQuestions() {
@@ -179,13 +183,21 @@ public class DiagnosisService {
             throw new ResponseStatusException(BAD_REQUEST, e.getMessage());
         }
 
+        result.applyStyleChoice(chosen);   // 최종 점수에 가산점을 얹으려면 무엇을 골랐는지 남겨야 한다
         result.applyAiAnalysis(List.of(), analysis.house(), analysis.summary(), analysis.reason(), analysis.fallback());
         repository.save(result);
         return ResultView.from(result);
     }
 
+    /**
+     * A/B 후보 하나. 이미지는 House 대표 이미지가 아니라 <b>그 House 대표 상품의 이미지</b>다.
+     * 방문객이 무드가 아니라 실제 상품을 보고 고르게 하려는 화면이라서다.
+     * 상품을 못 찾으면 House 이미지로 돌아간다 — 후보 카드가 비는 것보다 낫다.
+     */
     private StyleChoiceOption toOption(House house) {
-        return new StyleChoiceOption(house.name(), house.getTitle(), house.getImage());
+        Product representative = products.findById(house.getRepresentativeProductId());
+        String image = representative == null ? house.getImage() : representative.image();
+        return new StyleChoiceOption(house.name(), house.getTitle(), image);
     }
 
     private House parseHouseOrBadRequest(String raw) {

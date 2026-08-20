@@ -21,7 +21,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -41,22 +40,17 @@ public class StyleDiscoveryService {
     private static final int MATCH_COUNT = 2;
     private static final int KEYWORD_COUNT = 3;
 
-    /**
-     * House별 대표 상품(YOUR PICK). 데모용 고정 매핑이다.
+    /*
+     * YOUR PICK 상품은 House별 고정이며, 어느 상품인지는 House.getRepresentativeProductId()가 정한다.
+     * A/B 선택 화면의 후보 이미지도 같은 값을 쓰므로 두 화면이 어긋나지 않는다.
      *
-     * <p>원래는 셀카에서 AI가 상품을 특정하게 했으나, 실측 결과 신뢰할 수 없어 되돌렸다.
+     * 원래는 셀카에서 AI가 상품을 특정하게 했으나, 실측 결과 신뢰할 수 없어 되돌렸다.
      * 카탈로그 27개에 실제 매장 상품(예: 스타크 백팩)이 없어 정답 자체가 없는 경우가 있고,
      * 있더라도 같은 사진에서 매번 같은 상품이 나오지 않았다.
      * 화면의 YOUR PICK 카드는 비어 있으면 안 되므로, 확실하게 채워지는 쪽을 택한다.
      *
-     * <p>개선하려면 매장 상품을 모두 카탈로그에 넣고 상품별 참조 이미지로 유사도를 비교해야 한다.
+     * 개선하려면 매장 상품을 모두 카탈로그에 넣고 상품별 참조 이미지로 유사도를 비교해야 한다.
      */
-    private static final Map<House, String> DEMO_PICK = Map.of(
-            House.LEGACY,    "01_REC3",   // Aren 비세토스 레더 믹스 베니티 케이스
-            House.INSTINCT,  "02_REC2",   // Aren 비세토스 트래버텅글 크로스바디
-            House.FREEDOM,   "03_REC1",   // Aren 비세토스 슬링백
-            House.CURIOSITY, "04_REC1"    // Aren 듀오 오브 럭시 비세토스 숄더 카프스킨
-    );
 
     private final LlmClient llm;
     private final ProductCatalog products;
@@ -76,8 +70,8 @@ public class StyleDiscoveryService {
     /**
      * 셀카 무드 분석 + 저장. House당 최신 1건을 유지한다.
      *
-     * <p>기준 상품은 {@link #DEMO_PICK}으로 House마다 하나씩 고정한다. 요청으로도 받지 않고
-     * 셀카에서 찾아내지도 않는다. 이유는 상수 주석 참고.
+     * <p>기준 상품은 House마다 하나씩 고정이다({@link House#getRepresentativeProductId()}). 요청으로도 받지 않고
+     * 셀카에서 찾아내지도 않는다. 이유는 위 주석 참고.
      */
     @Transactional
     public StyleDiscoveryView analyze(Long resultId, StyleDiscoveryRequest req) {
@@ -85,7 +79,7 @@ public class StyleDiscoveryService {
             throw new ResponseStatusException(NOT_FOUND, "진단 결과를 찾을 수 없습니다: " + resultId);
         }
         House house = parseHouse(req.house());
-        Product pick = products.findById(DEMO_PICK.get(house));
+        Product pick = products.findById(house.getRepresentativeProductId());
 
         Analysis analysis = runAnalysis(house, pick, req.photo());
         String pickId = pick == null ? null : pick.id();

@@ -33,6 +33,9 @@ public class AiAnalysisService {
     /** 명세서상 후속질문 개수. */
     private static final int QUESTION_COUNT = 2;
 
+    /** 가산점 규칙은 {@link DiagnosisResult#STYLE_CHOICE_BONUS}에 있다. 점수 규칙은 도메인에 모아둔다. */
+    private static final int STYLE_CHOICE_BONUS = DiagnosisResult.STYLE_CHOICE_BONUS;
+
     /** LLM 실패 시 사용할 기본 후속질문. */
     private static final List<String> FALLBACK_QUESTIONS = List.of(
             "최근에 가장 자주 손이 간 옷이나 아이템은 무엇인가요? '이건 나답다' 싶었던 이유도 함께 들려주세요.",
@@ -283,16 +286,24 @@ public class AiAnalysisService {
     /* ==================== A/B 이미지 선택 (신규) ==================== */
 
     /**
-     * 6문항 점수 1·2등 House를 반환한다. 동점이면 {@link House#recommendedRoute} 순서(enum 선언 순서)로 결정한다.
+     * 6문항 점수 1·2등 House를 반환한다. 동점이면 enum 선언 순서로 결정한다.
      * House가 4개뿐이라 2등은 항상 존재한다.
+     *
+     * <p>선택 가산점이 빠진 {@link DiagnosisResult#scoreRoute()}를 쓴다. 가산점이 섞이면
+     * 이미 고른 House가 1등으로 올라와, 다시 조회했을 때 후보가 달라진다.
      */
     public List<House> topTwoHouses(DiagnosisResult result) {
-        return result.recommendedRoute().subList(0, 2);
+        return result.scoreRoute().subList(0, 2);
     }
 
     /**
-     * 1·2등 House 중 사용자가 고른 쪽을 최종 House로 채택한다.
-     * 사유 입력 없이 이미지 선택 하나로 확정하는 방식이라 LLM을 호출하지 않는다.
+     * 1·2등 House 중 사용자가 고른 쪽에 가산점을 주고, <b>6문항 점수와 합산해</b> 최종 House를 정한다.
+     *
+     * <p>이전에는 고른 House를 무조건 최종으로 삼았다. 그러면 6문항 점수는 1·2등 후보를 추리는 데만
+     * 쓰이고 최종 결정에는 전혀 반영되지 않아, 탭 한 번이 문항 6개를 통째로 덮어썼다.
+     * 화면의 점수 막대와 결과가 어긋나 보이는 것도 이 때문이었다.
+     *
+     * <p>지금은 두 축이 모두 반영된다. {@link #STYLE_CHOICE_BONUS} 참고.
      */
     public Analysis analyzeStyleChoice(DiagnosisResult result, House chosen) {
         List<House> topTwo = topTwoHouses(result);
@@ -301,10 +312,20 @@ public class AiAnalysisService {
         }
 
         House other = topTwo.get(0) == chosen ? topTwo.get(1) : topTwo.get(0);
-        return new Analysis(chosen,
-                House.comboDescription(List.of(chosen)),
-                "%s와(과) %s 중 %s의 이미지에 더 끌린다고 답해주셨어요."
-                        .formatted(topTwo.get(0).name(), other.name(), chosen.name()),
+        Map<House, Integer> scores = result.scoreMap();
+
+        // 고른 쪽에 가산점을 얹어 비교한다. 동점이면 고른 쪽을 살린다.
+        int chosenTotal = scores.get(chosen) + STYLE_CHOICE_BONUS;
+        int otherTotal = scores.get(other);
+        House finalHouse = chosenTotal >= otherTotal ? chosen : other;
+
+        // reason은 화면에 노출되지 않는다(프론트 결과 페이지는 primaryHouse와 scores만 쓴다).
+        // 나중에 "왜 이 House인지" 따져볼 때 근거가 남도록 점수만 간결히 적는다.
+        return new Analysis(finalHouse,
+                House.comboDescription(List.of(finalHouse)),
+                "6문항 점수(%s %d점 / %s %d점)와 %s 이미지 선택을 함께 반영했어요."
+                        .formatted(topTwo.get(0).name(), scores.get(topTwo.get(0)),
+                                topTwo.get(1).name(), scores.get(topTwo.get(1)), chosen.name()),
                 false);
     }
 

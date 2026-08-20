@@ -13,7 +13,7 @@ public enum House {
             "시간이 쌓아온 가치와 이야기를 중요하게 여기며, 오래도록 이어지는 스타일에 끌리는 타입입니다.",
             List.of("헤리티지", "클래식", "타임리스"),
             "LEGACY ZONE", "HERITAGE 탐험", "#8a6d3b",
-            List.of("MCM-LEG-001", "MCM-LEG-002", "MCM-LEG-003"),
+            List.of("01_REC3", "01_REC1", "01_REC4"),
             "시간이 쌓아온 가치",
             "/images/mcm-house-legacy.png"
     ),
@@ -22,7 +22,7 @@ public enum House {
             "자신만의 감각을 믿고, 대담한 선택과 스타일로 개성을 표현하는 타입입니다.",
             List.of("자기표현", "대담함", "개성"),
             "INSTINCT ZONE", "BOLD 탐험", "#b0413e",
-            List.of("MCM-INS-001", "MCM-INS-002", "MCM-INS-003"),
+            List.of("02_REC2", "02_REC4", "02_REC1"),
             "자신의 감각을 믿는 대담함",
             "/images/mcm-house-instinct.png"
     ),
@@ -31,7 +31,7 @@ public enum House {
             "정해진 방식에 얽매이지 않고, 다양한 환경을 자유롭게 넘나드는 스타일을 즐기는 타입입니다.",
             List.of("자유로움", "모빌리티", "유연함"),
             "FREEDOM ZONE", "MOBILITY 탐험", "#3f6f6a",
-            List.of("MCM-FRE-001", "MCM-FRE-002", "MCM-FRE-003"),
+            List.of("03_REC1", "03_REC3", "03_REC5"),
             "얽매이지 않는 자유로움",
             "/images/mcm-house-freedom.png"
     ),
@@ -40,7 +40,7 @@ public enum House {
             "익숙한 것에 머무르기보다 새로운 아이디어와 경험을 발견하고 시도하는 타입입니다.",
             List.of("발견", "새로움", "실험정신"),
             "CURIOSITY ZONE", "DISCOVERY 탐험", "#5a4b8a",
-            List.of("MCM-CUR-001", "MCM-CUR-002", "MCM-CUR-003"),
+            List.of("04_REC1", "04_REC3", "04_REC5"),
             "새로운 것을 향한 호기심",
             "/images/mcm-house-curiosity.png"
     );
@@ -79,6 +79,14 @@ public enum House {
     public String getZoneMission() { return zoneMission; }
     public String getColor() { return color; }
     public List<String> getRecommendedProductIds() { return recommendedProductIds; }
+
+    /**
+     * 이 House를 대표하는 상품 id. 추천 목록의 첫 번째다.
+     *
+     * <p>A/B 스타일 선택 화면의 후보 이미지와 셀카 미션의 YOUR PICK이 모두 이 값을 쓴다.
+     * House당 대표 상품을 여러 곳에 각각 적어두면 서로 어긋나므로 여기 한 곳에 둔다.
+     */
+    public String getRepresentativeProductId() { return recommendedProductIds.get(0); }
     public String getTrait() { return trait; }
     public String getImage() { return image; }
 

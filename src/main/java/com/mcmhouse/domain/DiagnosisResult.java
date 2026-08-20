@@ -23,6 +23,17 @@ public class DiagnosisResult {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    /**
+     * A/B 이미지 선택에 주는 가산점. 6문항은 선택지 하나당 2점이므로 한 문항보다 살짝 무겁다.
+     *
+     * <p>이 값이 3이면 <b>한 문항 차이(2점)까지만 뒤집을 수 있다.</b> 두 문항 이상(4점) 벌어지면
+     * 이미지를 반대로 골라도 6문항 결과가 유지된다. 성향이 애매할 때만 마지막 선택이 결정타가 되고,
+     * 뚜렷할 때는 문항 결과를 존중한다는 뜻이다.
+     *
+     * <p>0으로 두면 동점일 때만 선택이 반영되고, 6 이상이면 사실상 선택이 전부를 결정한다.
+     */
+    public static final int STYLE_CHOICE_BONUS = 3;
+
     /** 질문 순서대로 선택한 House (answers[i] = i+1번 질문의 선택 House) */
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "diagnosis_answer", joinColumns = @JoinColumn(name = "result_id"))
@@ -59,6 +70,15 @@ public class DiagnosisResult {
     private House currentZone;
 
     /* ---------- AI 아이덴티티 분석 ---------- */
+
+    /**
+     * A/B 이미지 선택에서 방문객이 고른 House. 그 단계를 거치지 않았으면 null.
+     * 최종 점수 계산({@link #finalScoreMap()})에 가산점을 얹을 대상이라 따로 기억한다 —
+     * 선택이 뒤집힌 경우 {@code aiHouse}만으로는 무엇을 골랐는지 알 수 없다.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "style_choice_house")
+    private House styleChoiceHouse;
 
     /** LLM이 생성한 자연어 후속질문. 아직 생성 전이면 비어 있다. */
     @ElementCollection(fetch = FetchType.EAGER)
@@ -131,11 +151,41 @@ public class DiagnosisResult {
     }
 
     /**
+     * 6문항 점수에 A/B 이미지 선택 가산점까지 반영한 최종 점수.
+     *
+     * <p>최종 House는 이 점수로 결정되므로, 화면의 점수 막대도 이 값으로 그려야
+     * "1등 막대와 결과가 다르다"처럼 보이지 않는다. A/B 단계를 거치지 않았으면 6문항 점수와 같다.
+     */
+    public Map<House, Integer> finalScoreMap() {
+        Map<House, Integer> map = scoreMap();
+        if (styleChoiceHouse != null) {
+            map.merge(styleChoiceHouse, STYLE_CHOICE_BONUS, Integer::sum);
+        }
+        return map;
+    }
+
+    /** A/B 이미지 선택에서 방문객이 고른 House를 기록한다. */
+    public void applyStyleChoice(House chosen) {
+        this.styleChoiceHouse = chosen;
+    }
+
+    /**
      * 개인화 추천 탐험 순서: 점수 내림차순, 동점이면 enum 선언 순서.
      * (Legacy 6 / Curiosity 4 / Freedom 2 / Instinct 0 → LEGACY → CURIOSITY → FREEDOM → INSTINCT)
      */
     public List<House> recommendedRoute() {
-        Map<House, Integer> map = scoreMap();
+        return routeOf(finalScoreMap());
+    }
+
+    /**
+     * 6문항 점수만으로 정렬한 순서. A/B 후보(1·2등)를 뽑을 때 쓴다.
+     * 선택 가산점이 섞이면 이미 고른 House가 계속 1등으로 올라와 후보가 흔들리므로 분리한다.
+     */
+    public List<House> scoreRoute() {
+        return routeOf(scoreMap());
+    }
+
+    private List<House> routeOf(Map<House, Integer> map) {
         List<House> route = new ArrayList<>(List.of(House.values()));
         route.sort((a, b) -> {
             int cmp = Integer.compare(map.get(b), map.get(a));
@@ -210,6 +260,7 @@ public class DiagnosisResult {
     public List<House> getFinalHouses() { return finalHouses; }
     public List<ZoneVisit> getVisits() { return visits; }
     public House getCurrentZone() { return currentZone; }
+    public House getStyleChoiceHouse() { return styleChoiceHouse; }
     public List<String> getAiQuestions() { return aiQuestions; }
     public List<String> getAiAnswers() { return aiAnswers; }
     public House getAiHouse() { return aiHouse; }

@@ -29,9 +29,12 @@ public class StyleDiscovery {
     @Column(nullable = false)
     private House house;
 
-    /** 촬영한 셀카. data URL 형태(data:image/jpeg;base64,...)로 저장해 그대로 <img>에 쓸 수 있게 한다. */
+    /**
+     * 촬영한 셀카. data URL 형태(data:image/jpeg;base64,...)로 저장해 그대로 <img>에 쓸 수 있게 한다.
+     * 실제 셀카는 base64로 수백 KB~수 MB라 TEXT(64KB 한도)로는 부족해 LONGTEXT로 명시한다.
+     */
     @Lob
-    @Column(name = "photo_data_url", nullable = false)
+    @Column(name = "photo_data_url", nullable = false, columnDefinition = "LONGTEXT")
     private String photoDataUrl;
 
     /** AI가 셀카에서 특정한 상품 id. 특정 실패 시 null. */
